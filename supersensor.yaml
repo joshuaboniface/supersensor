@@ -1,0 +1,288 @@
+---
+
+###############################################################################
+# SuperSensor v1.0 ESPHome configuration
+###############################################################################
+#
+#    Copyright (C) 2023 Joshua M. Boniface <joshua@boniface.me>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+###############################################################################
+
+esphome:
+  name: supersensor
+  name_add_mac_suffix: true
+  friendly_name: "Supersensor"
+  on_boot:
+    - priority: 600
+      then:
+        - light.turn_on:
+            id: output_led
+            effect: flash
+            red: 1
+            green: 1
+            blue: 1
+
+    - priority: -500
+      then:
+        - wait_until: api.connected
+        - delay: 2s
+        - switch.turn_on: use_wake_word
+        - delay: 2s
+        - switch.turn_off: use_wake_word
+        - delay: 2s
+        - switch.turn_on: use_wake_word
+        - light.turn_off:
+            id: output_led
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+# Enable logging only via web
+logger:
+  level: DEBUG
+  baud_rate: 115200
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  password: !secret ota_password
+  safe_mode: false
+
+web_server:
+  port: 80
+  auth:
+    username: !secret web_auth_username
+    password: !secret web_auth_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: !secret wifi_domain
+  power_save_mode: LIGHT
+  reboot_timeout: 5min
+
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 115200
+  setup_priority: 200
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO25
+  i2s_bclk_pin: GPIO26
+
+microphone:
+  - platform: i2s_audio
+    id: mic
+    adc_type: external
+    i2s_din_pin: GPIO27
+    pdm: false
+
+voice_assistant:
+  microphone: mic
+  use_wake_word: false
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 4.0
+  id: assist
+  on_wake_word_detected:
+    - light.turn_off:
+        id: output_led
+    - light.turn_on:
+        id: output_led
+        red: 0
+        green: 0
+        blue: 1
+  on_listening:
+    - light.turn_on:
+        id: output_led
+        red: 0
+        green: 0
+        blue: 1
+  on_stt_end:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
+  on_tts_start:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
+    - if:
+        condition:
+          lambda: return x != "Sorry, I couldn't understand that";
+        then:
+          - logger.log: "Command successful!"
+          - light.turn_on:
+              id: output_led
+              effect: hold
+              red: 0
+              green: 1
+              blue: 0
+        else:
+          - logger.log: "Command failed!"
+          - light.turn_on:
+              id: output_led
+              effect: hold
+              red: 1
+              green: 0
+              blue: 0 
+
+light:
+  - platform: rgb
+    id: output_led
+    red: rgb_r
+    green: rgb_g
+    blue: rgb_b
+    default_transition_length: 0.15s
+    flash_transition_length: 0.15s
+    effects:
+      - strobe:
+          name: flash
+          colors:
+            - state: true
+              duration: 0.5s
+            - state: false
+              duration: 0.5s
+      - automation:
+          name: hold
+          sequence:
+            - delay: 5s
+            - light.turn_off:
+                id: output_led
+                transition_length: 1s
+  
+output:
+  - platform: ledc
+    id: rgb_r
+    pin: GPIO14
+  - platform: ledc
+    id: rgb_g
+    pin: GPIO12
+  - platform: ledc
+    id: rgb_b
+    pin: GPIO13
+
+button:
+  - platform: restart
+    name: "ESP32 Restart"
+    icon: mdi:power-cycle
+    entity_category: "diagnostic"
+
+switch:
+  - platform: template
+    name: "Enable Wake Word"
+    icon: mdi:account-voice
+    id: use_wake_word
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+    on_turn_on:
+      - lambda: id(assist).set_use_wake_word(true);
+      - if:
+          condition:
+            not:
+              - voice_assistant.is_running
+          then:
+            - voice_assistant.start_continuous
+    on_turn_off:
+      - voice_assistant.stop
+      - lambda: id(assist).set_use_wake_word(false);
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO33
+      mode:
+        input: true
+        pulldown: true
+    name: "PIR Motion"
+    device_class: motion
+
+sensor:
+  - platform: bme280
+    temperature:
+      name: "BME280 Temperature"
+    pressure:
+      name: "BME280 Pressure"
+    humidity:
+      name: "BME280 Humidity"
+    update_interval: 15s
+    address: 0x76
+
+  - platform: bmp280
+    temperature:
+      name: "BMP280 Temperature"
+    pressure:
+      name: "BMP280 Pressure"
+    update_interval: 15s
+    address: 0x76
+
+  - platform: uptime
+    name: "ESP32 Uptime"
+    icon: mdi:clock-alert
+    update_interval: 15s
+    entity_category: "diagnostic"
+
+  - platform: wifi_signal
+    name: "ESP32 WiFi RSSI"
+    icon: mdi:wifi-strength-2
+    update_interval: 15s
+    entity_category: "diagnostic"
+
+  - platform: internal_temperature
+    name: "ESP32 Temperature"
+    icon: mdi:thermometer
+    unit_of_measurement: °C
+    device_class: TEMPERATURE
+    update_interval: 15s
+    entity_category: "diagnostic"
+
+  - platform: template
+    name: "ESP32 CPU Frequency"
+    icon: mdi:cpu-32-bit
+    accuracy_decimals: 1
+    unit_of_measurement: MHz
+    update_interval: 15s
+    lambda: |-
+      return ets_get_cpu_frequency();
+    entity_category: "diagnostic"
+
+  - platform: template
+    name: "ESP32 Free Memory"
+    icon: mdi:memory
+    unit_of_measurement: 'kB'
+    state_class: measurement
+    update_interval: 15s
+    lambda: |-
+      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+    entity_category: "diagnostic"
