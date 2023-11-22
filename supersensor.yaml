@@ -20,6 +20,10 @@
 #
 ###############################################################################
 
+substitutions:
+  # How long a PIR activation should be held for
+  pir_holdtime: "10s"
+
 esphome:
   name: supersensor
   name_add_mac_suffix: true
@@ -59,6 +63,15 @@ esp32:
       CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
       CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
       CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+script:
+  - id: pir_handler
+    then:
+      - lambda: |-
+          id(pir_motion).publish_state(true);
+      - delay: ${pir_holdtime}
+      - lambda: |-
+          id(pir_motion).publish_state(false);
 
 # Enable logging only via web
 logger:
@@ -220,12 +233,21 @@ switch:
 
 binary_sensor:
   - platform: gpio
+    name: "PIR GPIO"
+    id: pir_gpio
     pin:
       number: GPIO33
       mode:
         input: true
         pulldown: true
+    internal: false
+    device_class: motion
+    on_press:
+      - script.execute: pir_handler
+
+  - platform: template
     name: "PIR Motion"
+    id: pir_motion
     device_class: motion
 
 sensor:
