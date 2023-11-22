@@ -262,6 +262,11 @@ sensor:
     update_interval: 15s
     address: 0x76
 
+  - platform: bh1750
+    name: "BH1750 Illuminance"
+    address: 0x23
+    update_interval: 15s
+
   - platform: uptime
     name: "ESP32 Uptime"
     icon: mdi:clock-alert
