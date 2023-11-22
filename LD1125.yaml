@@ -1,0 +1,365 @@
+substitutions:
+  devicename: "supersensor" #Rename the device what you want.
+  upper_devicename: ESP Radar #Rename the device what you want.
+  entity_name_prefix: ""
+  ignored_radar_ranges: |-
+      {
+        {2.20,3.30},
+        {2.20,2.75}
+      }
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  password: !secret ota_password
+
+web_server:
+  port: 80
+  auth:
+    username: !secret web_auth_username
+    password: !secret web_auth_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: !secret wifi_domain
+  power_save_mode: LIGHT
+  reboot_timeout: 5min
+
+logger:
+  level: DEBUG
+  baud_rate: 115200
+  logs:
+    text_sensor: INFO
+
+esphome:
+  name: supersensor
+  name_add_mac_suffix: false
+  on_boot:
+    priority: 200
+    then:
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth1_mov_st = "mth1_mov=" + str_sprintf("%.0f",id(LD1125H_mth1_mov).state) +"\r\n";
+            return std::vector<uint8_t>(mth1_mov_st.begin(), mth1_mov_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth2_mov_st = "mth2_mov=" + str_sprintf("%.0f",id(LD1125H_mth2_mov).state) +"\r\n";
+            return std::vector<uint8_t>(mth2_mov_st.begin(), mth2_mov_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth3_mov_st = "mth3_mov=" + str_sprintf("%.0f",id(LD1125H_mth3_mov).state) +"\r\n";
+            return std::vector<uint8_t>(mth3_mov_st.begin(), mth3_mov_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth1_occ_st = "mth1_occ=" + str_sprintf("%.0f",id(LD1125H_mth1_occ).state) +"\r\n";
+            return std::vector<uint8_t>(mth1_occ_st.begin(), mth1_occ_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth2_occ_st = "mth2_occ=" + str_sprintf("%.0f",id(LD1125H_mth2_occ).state) +"\r\n";
+            return std::vector<uint8_t>(mth2_occ_st.begin(), mth2_occ_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string mth3_occ_st = "mth3_occ=" + str_sprintf("%.0f",id(LD1125H_mth3_occ).state) +"\r\n";
+            return std::vector<uint8_t>(mth3_occ_st.begin(), mth3_occ_st.end());
+      - uart.write:
+          id: LD1125H_UART_BUS
+          data: !lambda |-
+            std::string rmaxst = "rmax=" + str_sprintf("%.1f",id(LD1125H_rmax).state) +"\r\n";
+            return std::vector<uint8_t>(rmaxst.begin(), rmaxst.end());
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/ssieb/custom_components #Thanks for @ssieb components.
+    components: [ serial ]
+
+uart:
+  id: LD1125H_UART_BUS
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 115200
+  data_bits: 8
+  stop_bits: 1
+  parity: NONE
+  # debug:
+  #   direction: BOTH
+  #   dummy_receiver: false
+  #   after:
+  #     delimiter: "\n"
+  #   sequence:
+  #     - lambda: UARTDebug::log_string(direction, bytes);
+status_led:
+  pin:
+    number: GPIO2
+    inverted: false
+globals:
+  - id: LD1125H_Last_Time
+    type: time_t
+    restore_value: no
+    initial_value: time(NULL)
+  - id: LD1125H_Last_Mov_Time
+    type: time_t
+    restore_value: no
+    initial_value: time(NULL)
+  - id: LD1125H_Clearance_Status
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: ignored_ranges
+    type: std::vector<std::vector<float>>
+    restore_value: no
+    initial_value: ${ignored_radar_ranges}
+interval:
+  - interval: 1s #Clearance Scan Time
+    setup_priority: 200
+    then:
+      lambda: |-
+        if ((time(NULL)-id(LD1125H_Last_Time))>id(LD1125H_Clearance_Time).state) {
+          if ((id(LD1125H_Clearance_Status) == false) || (id(LD1125H_Occupancy).state != "Clear")) {
+            id(LD1125H_Occupancy).publish_state("Clear");
+            id(LD1125H_Clearance_Status) = true;
+          }
+          if (id(LD1125H_MovOcc_Binary).state == true) {
+            id(LD1125H_MovOcc_Binary).publish_state(false);
+          }
+          if (id(LD1125H_Mov_Binary).state == true) {
+            id(LD1125H_Mov_Binary).publish_state(false);
+          }
+        }
+number:
+  - platform: template
+    name: ${entity_name_prefix} 0-2.8m Movement Minimum Signal
+    id: LD1125H_mth1_mov
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true
+    initial_value: "80"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth1_mov_st = "mth1_mov=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth1_mov_st.begin(), mth1_mov_st.end());
+  - platform: template
+    name: ${entity_name_prefix} 2.8m-8m Movement Minimum Signal
+    id: LD1125H_mth2_mov
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "50"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth2_mov_st = "mth2_mov=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth2_mov_st.begin(), mth2_mov_st.end());
+  - platform: template
+    name: ${entity_name_prefix} 8m-∞ Movement Minimum Signal
+    id: LD1125H_mth3_mov
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "20"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth3_mov_st = "mth3_mov=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth3_mov_st.begin(), mth3_mov_st.end());
+  - platform: template
+    name: ${entity_name_prefix} 0-2.8m Occupancy Minimum Signal
+    id: LD1125H_mth1_occ
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true
+    initial_value: "60"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth1_occ_st = "mth1_occ=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth1_occ_st.begin(), mth1_occ_st.end());
+  - platform: template
+    name: ${entity_name_prefix} 2.8m-8m Occupancy Minimum Signal
+    id: LD1125H_mth2_occ
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "55"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth2_occ_st = "mth2_occ=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth2_occ_st.begin(), mth2_occ_st.end());
+  - platform: template
+    name: ${entity_name_prefix} 8m-∞ Occupancy Minimum Signal
+    id: LD1125H_mth3_occ
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "20"
+    min_value: 0
+    max_value: 1500
+    step: 1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string mth3_occ_st = "mth3_occ=" + str_sprintf("%.0f",x) +"\r\n";
+              return std::vector<uint8_t>(mth3_occ_st.begin(), mth3_occ_st.end());
+  - platform: template
+    name: ${entity_name_prefix} Max Detection Distance (m) #rmax is max detection distance.
+    id: LD1125H_rmax
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "8" #Default rmax Setting
+    min_value: 0.0
+    max_value: 60
+    step: 0.1
+    set_action:
+      then:
+        - uart.write:
+            id: LD1125H_UART_BUS
+            data: !lambda |-
+              std::string rmaxst = "rmax=" + str_sprintf("%.1f",x) +"\r\n";
+              return std::vector<uint8_t>(rmaxst.begin(), rmaxst.end());
+  - platform: template
+    name: ${entity_name_prefix} Seconds to Clear Mov/Occ
+    id: LD1125H_Clearance_Time
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "20" #LD1125H Mov/Occ > Clearance Time Here
+    min_value: 0
+    max_value: 60
+    step: 1
+  - platform: template
+    name: ${entity_name_prefix} Seconds to Detection
+    id: LD1125H_Mov_Time
+    icon: "mdi:cogs"
+    optimistic: true
+    restore_value: true #If you don't want to store the setting at ESP, set it to false.
+    initial_value: "1" #LD1125H Mov > Occ Time Here
+    min_value: 0.1
+    max_value: 10
+    step: 0.1
+sensor:
+  - platform: template
+    name: ${entity_name_prefix} Objects Distance
+    id: LD1125H_Distance
+    icon: "mdi:signal-distance-variant"
+    unit_of_measurement: "m"
+    accuracy_decimals: 2
+    filters:    # Use Filter To Debounce
+    - sliding_window_moving_average:
+        window_size: 200
+        send_every: 10
+    - heartbeat: 0.2s
+text_sensor:
+  - platform: serial
+    uart_id: LD1125H_UART_BUS
+    name: ${entity_name_prefix} UART Text
+    id: LD1125H_UART_Text
+    icon: "mdi:format-text"
+    internal: True
+    on_value:
+      lambda: |-
+        for (const auto& row : id(ignored_ranges)) {
+          if ( ( atof(id(LD1125H_UART_Text).state.substr(9).c_str()) > row[0] ) && ( atof(id(LD1125H_UART_Text).state.substr(9).c_str()) < row[1] ) ) {
+            break;
+          } else {
+            if (id(LD1125H_UART_Text).state.substr(0,3) == "occ") {
+              id(LD1125H_Distance).publish_state(atof(id(LD1125H_UART_Text).state.substr(9).c_str()));
+              if ((time(NULL)-id(LD1125H_Last_Mov_Time))>id(LD1125H_Mov_Time).state) {
+                id(LD1125H_Occupancy).publish_state("Occupied");
+                if (id(LD1125H_MovOcc_Binary).state == false) {
+                  id(LD1125H_MovOcc_Binary).publish_state(true);
+                }
+                if (id(LD1125H_Mov_Binary).state == true) {
+                  id(LD1125H_Mov_Binary).publish_state(false);
+                }
+              }
+              if (id(LD1125H_MovOcc_Binary).state == false) {
+                id(LD1125H_MovOcc_Binary).publish_state(true);
+              }
+              id(LD1125H_Last_Time) = time(NULL);
+              if (id(LD1125H_Clearance_Status) == true) {
+                id(LD1125H_Clearance_Status) = false;
+              }
+            }
+            else if (id(LD1125H_UART_Text).state.substr(0,3) == "mov") {
+              id(LD1125H_Distance).publish_state(atof(id(LD1125H_UART_Text).state.substr(9).c_str()));
+              id(LD1125H_Occupancy).publish_state("Movement");
+              if (id(LD1125H_MovOcc_Binary).state == false) {
+                id(LD1125H_MovOcc_Binary).publish_state(true);
+              }
+              if (id(LD1125H_Mov_Binary).state == false) {
+                id(LD1125H_Mov_Binary).publish_state(true);
+              }
+              id(LD1125H_Last_Mov_Time) = time(NULL);
+              id(LD1125H_Last_Time) = time(NULL);
+              if (id(LD1125H_Clearance_Status) == true) {
+                id(LD1125H_Clearance_Status) = false;
+              }
+            }
+          }
+        }
+  - platform: template
+    name: ${entity_name_prefix} Occupancy Status
+    id: LD1125H_Occupancy
+    icon: "mdi:motion-sensor"
+binary_sensor:
+  - platform: template
+    name: ${entity_name_prefix} Occupancy or Movement
+    id: LD1125H_MovOcc_Binary
+    device_class: occupancy
+  - platform: template
+    name: ${entity_name_prefix} Motion
+    id: LD1125H_Mov_Binary
+    device_class: motion

@@ -21,13 +21,32 @@
 ###############################################################################
 
 #
+# Compile-time Substitutions
+#
+substitutions:
+  ignored_radar_ranges: |-
+    {
+      { 2.20, 3.30 },
+      { 2.20, 2.75 }
+    }
+
+#
 # Core configuration
 #
 esphome:
   name: supersensor
   name_add_mac_suffix: true
   on_boot:
-    - priority: 200
+    - priority: 600
+      then:
+        - light.turn_on:
+            id: output_led
+            effect: flash
+            red: 1
+            green: 1
+            blue: 1
+
+    - priority: 100
       then:
         # Configure LD1125H via UART
         - uart.write:
@@ -65,20 +84,18 @@ esphome:
             data: !lambda |-
               std::string rmaxst = "rmax=" + str_sprintf("%.1f",id(LD1125H_rmax).state) + "\r\n";
               return std::vector<uint8_t>(rmaxst.begin(), rmaxst.end());
-        - uart.write:
-            id: LD1125H_UART_BUS
-            data: !lambda |-
-              std::string omst = "opt_mode=1\r\n";
-              return std::vector<uint8_t>(omst.begin(), omst.end());
-    - priority: -100
+
+    - priority: -500
       then:
-        - light.turn_on:
-            id: output_led
-            effect: flash
-            red: 1
-            green: 1
-            blue: 1
         - wait_until: api.connected
+        - delay: 3s
+        - switch.turn_on: use_wake_word
+        - delay: 2s
+        - switch.turn_off: use_wake_word
+        - delay: 2s
+        - switch.turn_on: use_wake_word
+        - light.turn_off:
+            id: output_led
 
 esp32:
   board: esp32dev
@@ -94,6 +111,12 @@ esp32:
       CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
       CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
+external_components:
+  - source:
+      type: git
+      url: https://github.com/ssieb/custom_components
+    components: [ serial ]
+
 logger:
   level: VERBOSE
   baud_rate: 115200
@@ -104,6 +127,7 @@ api:
 
 ota:
   password: !secret ota_password
+  safe_mode: false
 
 web_server:
   port: 80
@@ -120,8 +144,9 @@ wifi:
 
 uart:
   id: LD1125H_UART_BUS
-  rx_pin: GPIO16
-  tx_pin: GPIO17
+  rx_pin: GPIO18
+  tx_pin: GPIO19
+  setup_priority: 200
   baud_rate: 115200
   data_bits: 8
   stop_bits: 1
@@ -131,6 +156,31 @@ i2c:
   sda: GPIO21
   scl: GPIO22
   scan: true
+
+#
+# Radar Globals
+#
+globals:
+  - id: LD1125H_Last_Update_Time
+    type: uint32_t
+    restore_value: no
+    initial_value: millis()
+  - id: LD1125H_Last_Time
+    type: time_t
+    restore_value: no
+    initial_value: time(NULL)
+  - id: LD1125H_Last_Mov_Time
+    type: time_t
+    restore_value: no
+    initial_value: time(NULL)
+  - id: LD1125H_Clearance_Status
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: ignored_ranges
+    type: std::vector<std::vector<float>>
+    restore_value: no
+    initial_value: ${ignored_radar_ranges}
 
 #
 # Voice Control
@@ -153,30 +203,6 @@ voice_assistant:
   auto_gain: 31dBFS
   volume_multiplier: 5.0
   id: assist
-  on_client_connected:
-    - if:
-        condition:
-          switch.is_on: use_wake_word
-        then:
-          - voice_assistant.start_continuous:
-          - wait_until: voice_assistant.is_running
-          - delay: 1s
-          - lambda: id(assist).set_use_wake_word(true);
-          - light.turn_off:
-              id: output_led
-  on_client_disconnected:
-    - if:
-        condition:
-          switch.is_on: use_wake_word
-        then:
-          - light.turn_on:
-              id: output_led
-              effect: flash
-              red: 1
-              green: 1
-              blue: 1
-          - lambda: id(assist).set_use_wake_word(false);
-          - voice_assistant.stop:
   on_wake_word_detected:
     - light.turn_off:
         id: output_led
@@ -268,11 +294,11 @@ button:
 #
 switch:
   - platform: template
-    name: "Enable Wake Word"
+    name: "Voice Enable Wake Word"
     icon: mdi:account-voice
     id: use_wake_word
     optimistic: true
-    restore_mode: RESTORE_DEFAULT_ON
+    restore_mode: ALWAYS_OFF
     entity_category: config
     on_turn_on:
       - lambda: id(assist).set_use_wake_word(true);
@@ -295,25 +321,97 @@ binary_sensor:
     name: "PIR Motion"
     device_class: motion
 
-  - platform: gpio
-    pin: GPIO32
-    name: "Radar Motion"
+  - platform: template
+    name: "LD1125H Occupancy & Movement"
+    id: LD1125H_MovOcc_Binary
+    device_class: occupancy
+
+  - platform: template
+    name: "LD1125H Motion"
+    id: LD1125H_Mov_Binary
     device_class: motion
+
+#
+# LD1125H Text Sensors
+#
+text_sensor:
+  - platform: serial
+    uart_id: LD1125H_UART_BUS
+    name: "LD1125H UART Text"
+    id: LD1125H_UART_Text
+    icon: mdi:format-text
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            if ((millis() - id(LD1125H_Last_Update_Time)) < 1000) {
+                return;
+            } else {
+                id(LD1125H_Last_Update_Time) = millis();
+            }
+            for (const auto& row : id(ignored_ranges)) {
+              if ( ( atof(id(LD1125H_UART_Text).state.substr(9).c_str()) > row[0] ) && ( atof(id(LD1125H_UART_Text).state.substr(9).c_str()) < row[1] ) ) {
+                break;
+              } else {
+                if (id(LD1125H_UART_Text).state.substr(0,3) == "occ") {
+                  id(LD1125H_Distance).publish_state(atof(id(LD1125H_UART_Text).state.substr(9).c_str()));
+                  if ((time(NULL)-id(LD1125H_Last_Mov_Time))>id(LD1125H_Mov_Time).state) {
+                    id(LD1125H_Occupancy).publish_state("Occupied");
+                    if (id(LD1125H_MovOcc_Binary).state == false) {
+                      id(LD1125H_MovOcc_Binary).publish_state(true);
+                    }
+                    if (id(LD1125H_Mov_Binary).state == true) {
+                      id(LD1125H_Mov_Binary).publish_state(false);
+                    }
+                  }
+                  if (id(LD1125H_MovOcc_Binary).state == false) {
+                    id(LD1125H_MovOcc_Binary).publish_state(true);
+                  }
+                  id(LD1125H_Last_Time) = time(NULL);
+                  if (id(LD1125H_Clearance_Status) == true) {
+                    id(LD1125H_Clearance_Status) = false;
+                  }
+                }
+                else if (id(LD1125H_UART_Text).state.substr(0,3) == "mov") {
+                  id(LD1125H_Distance).publish_state(atof(id(LD1125H_UART_Text).state.substr(9).c_str()));
+                  id(LD1125H_Occupancy).publish_state("Movement");
+                  if (id(LD1125H_MovOcc_Binary).state == false) {
+                    id(LD1125H_MovOcc_Binary).publish_state(true);
+                  }
+                  if (id(LD1125H_Mov_Binary).state == false) {
+                    id(LD1125H_Mov_Binary).publish_state(true);
+                  }
+                  id(LD1125H_Last_Mov_Time) = time(NULL);
+                  id(LD1125H_Last_Time) = time(NULL);
+                  if (id(LD1125H_Clearance_Status) == true) {
+                    id(LD1125H_Clearance_Status) = false;
+                  }
+                }
+              }
+            }
+
+  - platform: template
+    name: "LD1125H Occupancy Status"
+    id: LD1125H_Occupancy
+    icon: "mdi:motion-sensor"
+        
 
 #
 # Other Sensors
 #
 sensor:
+  # BME280 Temperature/Humidity/Pressure sensor
   - platform: bme280
     temperature:
       name: "BME280 Temperature"
-    pressure:
-      name: "BME280 Pressure"
     humidity:
       name: "BME280 Humidity"
+    pressure:
+      name: "BME280 Pressure"
     update_interval: 15s
     address: 0x76
 
+  # BMP280 Temperature/Pressure sensor (TEMPORARY)
   - platform: bmp280
     temperature:
       name: "BMP280 Temperature"
@@ -322,6 +420,15 @@ sensor:
     update_interval: 15s
     address: 0x76
 
+  # LD1125H Distance
+  - platform: template
+    name: LD1125H Detect Distance
+    id: LD1125H_Distance
+    icon: mdi:signal-distance-variant
+    unit_of_measurement: "m"
+    accuracy_decimals: 2
+
+  # Internal sensors
   - platform: uptime
     name: "ESP32 Uptime"
     icon: mdi:clock-alert
@@ -499,26 +606,46 @@ number:
               std::string rmaxst = "rmax=" + str_sprintf("%.1f",x) +"\r\n";
               return std::vector<uint8_t>(rmaxst.begin(), rmaxst.end());
 
-#  - platform: template
-#    name: "LD1125H Clear Time"
-#    id: LD1125H_Clearance_Time
-#    icon: mdi:cogs
-#    entity_category: "config"
-#    optimistic: true
-#    restore_value: true
-#    initial_value: "15"
-#    min_value: 0
-#    max_value: 60
-#    step: 1
+  - platform: template
+    name: "LD1125H Clear Time"
+    id: LD1125H_Clearance_Time
+    icon: mdi:cogs
+    entity_category: "config"
+    optimistic: true
+    restore_value: true
+    initial_value: "15"
+    min_value: 0
+    max_value: 60
+    step: 1
 
-#  - platform: template
-#    name: "LD1125H Detect Time"
-#    id: LD1125H_Mov_Time
-#    icon: mdi:cogs
-#    entity_category: "config"
-#    optimistic: true
-#    restore_value: true
-#    initial_value: "0.1"
-#    min_value: 0.1
-#    max_value: 10
-#    step: 0.1
+  - platform: template
+    name: "LD1125H Detect Time"
+    id: LD1125H_Mov_Time
+    icon: mdi:cogs
+    entity_category: "config"
+    optimistic: true
+    restore_value: true
+    initial_value: "0.1"
+    min_value: 0.1
+    max_value: 10
+    step: 0.1
+
+#
+# Radar Clear Scan Time Interval
+#
+interval:
+  - interval: 1s
+    then:
+      lambda: |-
+        if ((time(NULL)-id(LD1125H_Last_Time))>id(LD1125H_Clearance_Time).state) {
+          if ((id(LD1125H_Clearance_Status) == false) || (id(LD1125H_Occupancy).state != "Clear")) {
+            id(LD1125H_Occupancy).publish_state("Clear");
+            id(LD1125H_Clearance_Status) = true;
+          }
+          if (id(LD1125H_MovOcc_Binary).state == true) {
+            id(LD1125H_MovOcc_Binary).publish_state(false);
+          }
+          if (id(LD1125H_Mov_Binary).state == true) {
+            id(LD1125H_Mov_Binary).publish_state(false);
+          }
+        }
