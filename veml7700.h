@@ -12,7 +12,7 @@ class VEML7700CustomSensor : public PollingComponent, public Sensor {
     Sensor *white_sensor = new Sensor();
     Sensor *als_sensor = new Sensor();
 
-    VEML7700CustomSensor() : PollingComponent(15000) {}
+    VEML7700CustomSensor() : PollingComponent(5000) {}
     void setup() override {
         Wire.begin();
         veml.begin();
