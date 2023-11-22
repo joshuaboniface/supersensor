@@ -232,11 +232,7 @@ binary_sensor:
   - platform: gpio
     name: "PIR GPIO"
     id: pir_gpio
-    pin:
-      number: GPIO33
-      mode:
-        input: true
-        pulldown: true
+    pin: GPIO33
     internal: false
     device_class: motion
     on_press:
