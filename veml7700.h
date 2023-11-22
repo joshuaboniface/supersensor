@@ -9,8 +9,6 @@ class VEML7700CustomSensor : public PollingComponent, public Sensor {
         Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
     Sensor *lux_sensor = new Sensor();
-    Sensor *white_sensor = new Sensor();
-    Sensor *als_sensor = new Sensor();
 
     VEML7700CustomSensor() : PollingComponent(5000) {}
     void setup() override {
@@ -27,13 +25,7 @@ class VEML7700CustomSensor : public PollingComponent, public Sensor {
 
     void update() override {
         float lux = veml.readLux();
-        float white = veml.readWhite();
-        float als = veml.readALS();
         ESP_LOGD("VEML7700", "The value of sensor lux is: %.0f", lux);
-        ESP_LOGD("VEML7700", "The value of sensor white is: %.0f", white);
-        ESP_LOGD("VEML7700", "The value of sensor ALS is: %.0f", als);
         lux_sensor->publish_state(lux);
-        white_sensor->publish_state(white);
-        als_sensor->publish_state(als);
     }
 };

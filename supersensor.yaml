@@ -22,7 +22,7 @@
 
 substitutions:
   # How long a PIR activation should be held for
-  pir_holdtime: "10s"
+  pir_holdtime: "15s"
 
 esphome:
   name: supersensor
@@ -275,17 +275,10 @@ sensor:
     lambda: |-
       auto veml7700 = new VEML7700CustomSensor();
       App.register_component(veml7700);
-      return {veml7700, veml7700->lux_sensor, veml7700->white_sensor, veml7700->als_sensor};
+      return {veml7700->lux_sensor};
     sensors:
-    - name: "VEML7700 Light" # Required dummy sensor
-    - name: "VEML7700 Lux"
+    - name: "VEML7700 Illumination"
       unit_of_measurement: Lux
-      accuracy_decimals: 0
-    - name: "VEML7700 White"
-      unit_of_measurement: raw
-      accuracy_decimals: 0
-    - name: "VEML7700 ALS"
-      unit_of_measurement: raw
       accuracy_decimals: 0
 
   - platform: uptime
