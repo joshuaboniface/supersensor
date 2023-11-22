@@ -147,9 +147,6 @@ voice_assistant:
         id: output_led
         transition_length: 1s
   on_tts_start:
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
     - if:
         condition:
           lambda: return x != "Sorry, I couldn't understand that";
@@ -251,15 +248,15 @@ binary_sensor:
     device_class: motion
 
 sensor:
-  - platform: bme280
-    temperature:
-      name: "BME280 Temperature"
-    pressure:
-      name: "BME280 Pressure"
-    humidity:
-      name: "BME280 Humidity"
-    update_interval: 15s
-    address: 0x76
+#  - platform: bme280
+#    temperature:
+#      name: "BME280 Temperature"
+#    pressure:
+#      name: "BME280 Pressure"
+#    humidity:
+#      name: "BME280 Humidity"
+#    update_interval: 15s
+#    address: 0x76
 
   - platform: bmp280
     temperature:
