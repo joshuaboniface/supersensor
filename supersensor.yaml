@@ -28,6 +28,14 @@ esphome:
   name: supersensor
   name_add_mac_suffix: true
   friendly_name: "Supersensor"
+  includes:
+    - veml7700.h
+  libraries:
+    - "Wire"
+    - "Adafruit Unified Sensor"
+    - "SPI"
+    - "Adafruit BusIO"
+    - "Adafruit VEML7700 Library"
   on_boot:
     - priority: 600
       then:
@@ -52,17 +60,17 @@ esphome:
 
 esp32:
   board: esp32dev
-  framework:
-    type: esp-idf
-    sdkconfig_options:
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+#  framework:
+#    type: esp-idf
+#    sdkconfig_options:
+#      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+#      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+#      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+#      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+#      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+#      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+#      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+#      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
 script:
   - id: pir_handler
@@ -236,6 +244,7 @@ binary_sensor:
     internal: false
     device_class: motion
     on_press:
+      - script.stop: pir_handler
       - script.execute: pir_handler
 
   - platform: template
@@ -259,24 +268,36 @@ sensor:
       name: "BMP280 Temperature"
     pressure:
       name: "BMP280 Pressure"
-    update_interval: 15s
+    update_interval: 5s
     address: 0x76
 
-  - platform: bh1750
-    name: "BH1750 Illuminance"
-    address: 0x23
-    update_interval: 15s
+  - platform: custom
+    lambda: |-
+      auto veml7700 = new VEML7700CustomSensor();
+      App.register_component(veml7700);
+      return {veml7700, veml7700->lux_sensor, veml7700->white_sensor, veml7700->als_sensor};
+    sensors:
+    - name: "VEML7700 Light" # Required dummy sensor
+    - name: "VEML7700 Lux"
+      unit_of_measurement: Lux
+      accuracy_decimals: 0
+    - name: "VEML7700 White"
+      unit_of_measurement: raw
+      accuracy_decimals: 0
+    - name: "VEML7700 ALS"
+      unit_of_measurement: raw
+      accuracy_decimals: 0
 
   - platform: uptime
     name: "ESP32 Uptime"
     icon: mdi:clock-alert
-    update_interval: 15s
+    update_interval: 5s
     entity_category: "diagnostic"
 
   - platform: wifi_signal
     name: "ESP32 WiFi RSSI"
     icon: mdi:wifi-strength-2
-    update_interval: 15s
+    update_interval: 5s
     entity_category: "diagnostic"
 
   - platform: internal_temperature
@@ -284,7 +305,7 @@ sensor:
     icon: mdi:thermometer
     unit_of_measurement: °C
     device_class: TEMPERATURE
-    update_interval: 15s
+    update_interval: 5s
     entity_category: "diagnostic"
 
   - platform: template
@@ -292,7 +313,7 @@ sensor:
     icon: mdi:cpu-32-bit
     accuracy_decimals: 1
     unit_of_measurement: MHz
-    update_interval: 15s
+    update_interval: 5s
     lambda: |-
       return ets_get_cpu_frequency();
     entity_category: "diagnostic"
@@ -302,7 +323,7 @@ sensor:
     icon: mdi:memory
     unit_of_measurement: 'kB'
     state_class: measurement
-    update_interval: 15s
+    update_interval: 5s
     lambda: |-
       return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
     entity_category: "diagnostic"
