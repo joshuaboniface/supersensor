@@ -74,7 +74,11 @@ script:
     then:
       - lambda: |-
           id(pir_motion).publish_state(true);
-      - delay: ${pir_holdtime}
+      - while:
+          condition:
+            binary_sensor.is_on: pir_gpio
+          then:
+            - delay: ${pir_holdtime}
       - lambda: |-
           id(pir_motion).publish_state(false);
 
