@@ -52,6 +52,10 @@ esphome:
         - delay: 2s
         - switch.turn_on: use_wake_word
         - delay: 2s
+        - switch.turn_off: use_wake_word
+        - delay: 2s
+        - switch.turn_on: use_wake_word
+        - delay: 2s
         - light.turn_off:
             id: output_led
 
@@ -139,8 +143,9 @@ voice_assistant:
   id: assist
   on_error:
     - logger.log: "Voice Assistant encountered an error; restarting it"
-    - switch.turn_on: use_wake_word
     - switch.turn_off: use_wake_word
+    - delay: 1s
+    - switch.turn_on: use_wake_word
   on_wake_word_detected:
     - light.turn_off:
         id: output_led
