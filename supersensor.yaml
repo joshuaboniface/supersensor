@@ -28,6 +28,9 @@ esphome:
   name: supersensor
   name_add_mac_suffix: true
   friendly_name: "Supersensor"
+  project:
+    name: joshuaboniface.supersensor
+    version: "0.1"
   includes:
     - veml7700.h
   libraries:
@@ -58,6 +61,10 @@ esphome:
         - delay: 2s
         - light.turn_off:
             id: output_led
+
+dashboard_import:
+  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
+  import_full_config: false
 
 esp32:
   board: esp32dev
@@ -137,11 +144,14 @@ microphone:
 voice_assistant:
   microphone: mic
   use_wake_word: false
-  noise_suppression_level: 2
+  noise_suppression_level: 1
   auto_gain: 31dBFS
   volume_multiplier: 4.0
   id: assist
   on_error:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
     - logger.log: "Voice Assistant encountered an error; restarting it"
     - switch.turn_off: use_wake_word
     - delay: 1s
