@@ -49,19 +49,6 @@ esphome:
             green: 1
             blue: 1
 
-    - priority: -500
-      then:
-        - wait_until: api.connected
-        - delay: 2s
-        - switch.turn_on: use_wake_word
-        - delay: 2s
-        - switch.turn_off: use_wake_word
-        - delay: 2s
-        - switch.turn_on: use_wake_word
-        - delay: 2s
-        - light.turn_off:
-            id: output_led
-
 dashboard_import:
   package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
   import_full_config: false
@@ -101,6 +88,23 @@ logger:
 api:
   encryption:
     key: !secret api_encryption_key
+  on_client_disconnected:
+    - light.turn_on:
+        id: output_led
+        effect: flash
+        red: 1
+        green: 1
+        blue: 1
+    - switch.turn_off: use_wake_word
+  on_client_connected:
+    - switch.turn_on: use_wake_word
+    - delay: 2s
+    - switch.turn_off: use_wake_word
+    - delay: 2s
+    - switch.turn_on: use_wake_word
+    - delay: 2s
+    - light.turn_off:
+        id: output_led
 
 ota:
   password: !secret ota_password
@@ -144,7 +148,7 @@ microphone:
 voice_assistant:
   microphone: mic
   use_wake_word: false
-  noise_suppression_level: 1
+  noise_suppression_level: 2
   auto_gain: 31dBFS
   volume_multiplier: 4.0
   id: assist
