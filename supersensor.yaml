@@ -307,7 +307,7 @@ sensor:
     address: 0x29
     update_interval: 5s
     integration_time: 600ms
-    gain: auto
+    gain: medium
     device_factor: 53
     glass_attenuation_factor: 7.7
     visible:
