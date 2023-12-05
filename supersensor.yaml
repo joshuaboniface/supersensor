@@ -31,14 +31,6 @@ esphome:
   project:
     name: joshuaboniface.supersensor
     version: "0.1"
-  includes:
-    - veml7700.h
-  libraries:
-    - "Wire"
-    - "Adafruit Unified Sensor"
-    - "SPI"
-    - "Adafruit BusIO"
-    - "Adafruit VEML7700 Library"
   on_boot:
     - priority: 600
       then:
@@ -55,17 +47,17 @@ dashboard_import:
 
 esp32:
   board: esp32dev
-#  framework:
-#    type: esp-idf
-#    sdkconfig_options:
-#      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
-#      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
-#      CONFIG_ESP32_DATA_CACHE_64KB: "y"
-#      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
-#      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
-#      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
-#      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
-#      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
 script:
   - id: pir_handler
@@ -80,7 +72,6 @@ script:
       - lambda: |-
           id(pir_motion).publish_state(false);
 
-# Enable logging only via web
 logger:
   level: DEBUG
   baud_rate: 115200
@@ -97,6 +88,8 @@ api:
         blue: 1
     - switch.turn_off: use_wake_word
   on_client_connected:
+    # This absolute absurdity is required to prevent
+    # "no wake word detected" failure loops.
     - switch.turn_on: use_wake_word
     - delay: 2s
     - switch.turn_off: use_wake_word
@@ -124,25 +117,28 @@ wifi:
   reboot_timeout: 5min
 
 uart:
-  rx_pin: GPIO16
-  tx_pin: GPIO17
-  baud_rate: 115200
-  setup_priority: 200
+  id: ld2410_uart
+  rx_pin: GPIO18
+  tx_pin: GPIO19
+  baud_rate: 256000
+  data_bits: 8
+  stop_bits: 1
+  parity: NONE
 
 i2c:
-  sda: GPIO21
-  scl: GPIO22
+  sda: GPIO16
+  scl: GPIO17
   scan: true
 
 i2s_audio:
-  i2s_lrclk_pin: GPIO25
+  i2s_lrclk_pin: GPIO27
   i2s_bclk_pin: GPIO26
 
 microphone:
   - platform: i2s_audio
     id: mic
     adc_type: external
-    i2s_din_pin: GPIO27
+    i2s_din_pin: GPIO14
     pdm: false
 
 voice_assistant:
@@ -229,19 +225,178 @@ light:
 output:
   - platform: ledc
     id: rgb_r
-    pin: GPIO14
+    pin: GPIO32
   - platform: ledc
     id: rgb_g
-    pin: GPIO12
+    pin: GPIO33
   - platform: ledc
     id: rgb_b
+    pin: GPIO25
+
+ld2410:
+  id: ld2410_radar
+  uart_id: ld2410_uart
+  # These default values are captured here for
+  # posterity. They are configured below.
+  # max_move_distance : 6m
+  # max_still_distance: 0.75m
+  # g0_move_threshold: 10
+  # g0_still_threshold: 20
+  # g1_move_threshold: 10
+  # g1_still_threshold: 20
+  # g2_move_threshold: 20
+  # g2_still_threshold: 21
+  # g3_move_threshold: 30
+  # g3_still_threshold: 31
+  # g4_move_threshold: 40
+  # g4_still_threshold: 41
+  # g5_move_threshold: 50
+  # g5_still_threshold: 51
+  # g6_move_threshold: 60
+  # g6_still_threshold: 61
+  # g7_move_threshold: 70
+  # g7_still_threshold: 71
+  # g8_move_threshold: 80
+  # g8_still_threshold: 81
+
+binary_sensor:
+  - platform: gpio
+    name: "PIR GPIO"
+    id: pir_gpio
     pin: GPIO13
+    internal: false
+    device_class: motion
+    on_press:
+      - script.stop: pir_handler
+      - script.execute: pir_handler
+
+  - platform: template
+    name: "PIR Motion"
+    id: pir_motion
+    device_class: motion
+
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    has_target:
+      name: "LD2410C Presence"
+    has_moving_target:
+      name: "LD2410C Moving Target"
+    has_still_target:
+      name: "LD2410C Still Target"
+
+sensor:
+#  - platform: bme280
+#    temperature:
+#      name: "BME280 Temperature"
+#    pressure:
+#      name: "BME280 Pressure"
+#    humidity:
+#      name: "BME280 Humidity"
+#    update_interval: 15s
+#    address: 0x76
+
+  - platform: bmp280
+    temperature:
+      name: "BMP280 Temperature"
+    pressure:
+      name: "BMP280 Pressure"
+    update_interval: 5s
+    address: 0x76
+
+  - platform: tsl2591
+    address: 0x29
+    update_interval: 5s
+    integration_time: 600ms
+    gain: auto
+    device_factor: 53
+    glass_attenuation_factor: 7.7
+    visible:
+      name: "TSL2591 Visible Light"
+    infrared:
+      name: "TSL2591 Infrared Light"
+    full_spectrum:
+      name: "TSL2591 Full Spectrum Light"
+    calculated_lux:
+      id: i_lux
+      name: "TSL2591 Illumination"
+      unit_of_measurement: Lux
+    actual_gain:
+      id: "actual_gain"
+      name: "TSL2591 Gain"
+
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    moving_distance:
+      name: "LD2410C Moving Distance"
+      id: moving_distance
+    still_distance:
+      name: "LD2410C Still Distance"
+      id: still_distance
+    moving_energy:
+      name: "LD2410C Move Energy"
+    still_energy:
+      name: "LD2410C Still Energy"
+    detection_distance:
+      name: "LD2410C Presence Distance"
+
+  - platform: uptime
+    name: "ESP32 Uptime"
+    icon: mdi:clock-alert
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: wifi_signal
+    name: "ESP32 WiFi RSSI"
+    icon: mdi:wifi-strength-2
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: internal_temperature
+    name: "ESP32 Temperature"
+    icon: mdi:thermometer
+    unit_of_measurement: °C
+    device_class: TEMPERATURE
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: template
+    name: "ESP32 CPU Frequency"
+    icon: mdi:cpu-32-bit
+    accuracy_decimals: 1
+    unit_of_measurement: MHz
+    update_interval: 5s
+    lambda: |-
+      return ets_get_cpu_frequency();
+    entity_category: diagnostic
+
+  - platform: template
+    name: "ESP32 Free Memory"
+    icon: mdi:memory
+    unit_of_measurement: 'kB'
+    state_class: measurement
+    update_interval: 5s
+    lambda: |-
+      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: ld2410
+    version:
+      name: "LD2410C Firmware Version"
+    mac_address:
+      name: "LD2410C MAC Address"
 
 button:
+  - platform: ld2410
+    restart:
+      name: "LD2410C Restart"
+    factory_reset:
+      name: "LD2410C Factory Reset"
+
   - platform: restart
     name: "ESP32 Restart"
     icon: mdi:power-cycle
-    entity_category: "diagnostic"
+    entity_category: diagnostic
 
 switch:
   - platform: template
@@ -263,87 +418,69 @@ switch:
       - voice_assistant.stop
       - lambda: id(assist).set_use_wake_word(false);
 
-binary_sensor:
-  - platform: gpio
-    name: "PIR GPIO"
-    id: pir_gpio
-    pin: GPIO33
-    internal: false
-    device_class: motion
-    on_press:
-      - script.stop: pir_handler
-      - script.execute: pir_handler
+  - platform: ld2410
+    engineering_mode:
+      name: "LD2410C Engineering Mode"
+    bluetooth:
+      name: "LD2410C Bluetooth"
 
-  - platform: template
-    name: "PIR Motion"
-    id: pir_motion
-    device_class: motion
+number:
+  - platform: ld2410
+    timeout:
+      name: "LD2410C Timeout"
+    light_threshold:
+      name: "LD2410C Light Threshold"
+    max_move_distance_gate:
+      name: "LD2410C Max Move Distance Gate"
+    max_still_distance_gate:
+      name: "LD2410C Max Still Distance Gate"
+    g0:
+      move_threshold:
+        name: "LD2410C Gate0 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate0 Still Threshold"
+    g1:
+      move_threshold:
+        name: "LD2410C Gate1 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate1 Still Threshold"
+    g2:
+      move_threshold:
+        name: "LD2410C Gate2 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate2 Still Threshold"
+    g3:
+      move_threshold:
+        name: "LD2410C Gate3 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate3 Still Threshold"
+    g4:
+      move_threshold:
+        name: "LD2410C Gate4 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate4 Still Threshold"
+    g5:
+      move_threshold:
+        name: "LD2410C Gate5 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate5 Still Threshold"
+    g6:
+      move_threshold:
+        name: "LD2410C Gate6 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate6 Still Threshold"
+    g7:
+      move_threshold:
+        name: "LD2410C Gate7 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate7 Still Threshold"
+    g8:
+      move_threshold:
+        name: "LD2410C Gate8 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate8 Still Threshold"
 
-sensor:
-#  - platform: bme280
-#    temperature:
-#      name: "BME280 Temperature"
-#    pressure:
-#      name: "BME280 Pressure"
-#    humidity:
-#      name: "BME280 Humidity"
-#    update_interval: 15s
-#    address: 0x76
-
-  - platform: bmp280
-    temperature:
-      name: "BMP280 Temperature"
-    pressure:
-      name: "BMP280 Pressure"
-    update_interval: 5s
-    address: 0x76
-
-  - platform: custom
-    lambda: |-
-      auto veml7700 = new VEML7700CustomSensor();
-      App.register_component(veml7700);
-      return {veml7700->lux_sensor};
-    sensors:
-    - name: "VEML7700 Illumination"
-      unit_of_measurement: Lux
-      accuracy_decimals: 0
-
-  - platform: uptime
-    name: "ESP32 Uptime"
-    icon: mdi:clock-alert
-    update_interval: 5s
-    entity_category: "diagnostic"
-
-  - platform: wifi_signal
-    name: "ESP32 WiFi RSSI"
-    icon: mdi:wifi-strength-2
-    update_interval: 5s
-    entity_category: "diagnostic"
-
-  - platform: internal_temperature
-    name: "ESP32 Temperature"
-    icon: mdi:thermometer
-    unit_of_measurement: °C
-    device_class: TEMPERATURE
-    update_interval: 5s
-    entity_category: "diagnostic"
-
-  - platform: template
-    name: "ESP32 CPU Frequency"
-    icon: mdi:cpu-32-bit
-    accuracy_decimals: 1
-    unit_of_measurement: MHz
-    update_interval: 5s
-    lambda: |-
-      return ets_get_cpu_frequency();
-    entity_category: "diagnostic"
-
-  - platform: template
-    name: "ESP32 Free Memory"
-    icon: mdi:memory
-    unit_of_measurement: 'kB'
-    state_class: measurement
-    update_interval: 5s
-    lambda: |-
-      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
-    entity_category: "diagnostic"
+select:
+  - platform: ld2410
+    distance_resolution:
+      name: "LD2410C Distance Resolution"
