@@ -380,6 +380,20 @@ sensor:
     entity_category: diagnostic
 
 text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "ESP32 IP Address"
+    ssid:
+      name: "ESP32 Connected SSID"
+    bssid:
+      name: "ESP32 Connected BSSID"
+    mac_address:
+      name: "ESP32 WiFi MAC Address"
+    scan_results:
+      name: "ESP32 Latest Scan Results"
+    dns_address:
+      name: "ESP32 DNS Address"
+
   - platform: ld2410
     version:
       name: "LD2410C Firmware Version"
@@ -390,8 +404,11 @@ button:
   - platform: ld2410
     restart:
       name: "LD2410C Restart"
+      icon: mdi:power-cycle
+      entity_category: diagnostic
     factory_reset:
       name: "LD2410C Factory Reset"
+      entity_category: diagnostic
 
   - platform: restart
     name: "ESP32 Restart"
