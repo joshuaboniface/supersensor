@@ -20,10 +20,6 @@
 #
 ###############################################################################
 
-substitutions:
-  # How long a PIR activation should be held for
-  pir_holdtime: "15s"
-
 esphome:
   name: supersensor
   name_add_mac_suffix: true
@@ -34,6 +30,10 @@ esphome:
   on_boot:
     - priority: 600
       then:
+        - lambda: |-
+            id(supersensor_occupancy).publish_state(false);
+            id(pir_presence).publish_state(false);
+            id(light_presence).publish_state(false);
         - light.turn_on:
             id: output_led
             effect: flash
@@ -59,18 +59,154 @@ esp32:
       CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
       CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
+globals:
+  - id: pir_hold_time
+    type: int
+    restore_value: yes
+    initial_value: "15"
+
+  - id: light_presence_threshold
+    type: int
+    restore_value: yes
+    initial_value: "30"
+
+  - id: occupancy_detect_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+
+  - id: occupancy_clear_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+
 script:
   - id: pir_handler
     then:
       - lambda: |-
-          id(pir_motion).publish_state(true);
+          id(pir_presence).publish_state(true);
       - while:
           condition:
             binary_sensor.is_on: pir_gpio
           then:
-            - delay: ${pir_holdtime}
+            - delay: !lambda 'return(id(pir_hold_time) * 1000);'
       - lambda: |-
-          id(pir_motion).publish_state(false);
+          id(pir_presence).publish_state(false);
+
+  - id: light_handler
+    then:
+      - lambda: |-
+          if (id(tsl2591_lux).state >= id(light_presence_threshold)) {
+            id(light_presence).publish_state(true);
+          } else {
+            id(light_presence).publish_state(false);
+          }
+
+  - id: occupancy_detect_handler
+    then:
+      - lambda: |-
+          ESP_LOGD("occupancy_detect_handler", "Occupancy detect handler triggered");
+
+          // Get the current values of our presence sensors
+          bool pir = id(pir_presence).state;
+          bool radar = id(radar_presence).state;
+          bool light = id(light_presence).state;
+
+          // Determine if PIR counts (2nd bit of presence_type)
+          int pir_counts = (id(occupancy_detect_mode) & ( 1 << 2 )) >> 2;
+
+          // Determine if Radar counts (1st bit of presence_type)
+          int radar_counts = (id(occupancy_detect_mode) & ( 1 << 1 )) >> 1;
+
+          // Determine if Light counts (0th bit of presence_type)
+          int light_counts = (id(occupancy_detect_mode) & ( 1 << 0 )) >> 0;
+
+          // Determine our results
+          if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar & light
+            ESP_LOGD("occupancy_detect_handler", "PIR & Radar & Light: %i", pir & radar & light);
+            id(supersensor_occupancy).publish_state(pir & radar & light);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar
+            ESP_LOGD("occupancy_detect_handler", "PIR & Radar: %i", pir & radar);
+            id(supersensor_occupancy).publish_state(pir & radar);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & light
+            ESP_LOGD("occupancy_detect_handler", "PIR & Light: %i", pir & light);
+            id(supersensor_occupancy).publish_state(pir & light);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of radar & light
+            ESP_LOGD("occupancy_detect_handler", "Radar & Light: %i", radar & light);
+            id(supersensor_occupancy).publish_state(radar & light);
+          } else if (pir_counts) {
+            // Only pir
+            ESP_LOGD("occupancy_detect_handler", "PIR: %i", pir);
+            id(supersensor_occupancy).publish_state(pir);
+          } else if (radar_counts) {
+            // Only radar
+            ESP_LOGD("occupancy_detect_handler", "Radar: %i", radar);
+            id(supersensor_occupancy).publish_state(radar);
+          } else if (light_counts) {
+            // Only light
+            ESP_LOGD("occupancy_detect_handler", "Light: %i", light);
+            id(supersensor_occupancy).publish_state(light);
+          } else {
+            ESP_LOGD("occupancy_detect_handler", "None");
+            id(supersensor_occupancy).publish_state(false);
+          }
+
+  - id: occupancy_clear_handler
+    then:
+      - lambda: |-
+          ESP_LOGD("occupancy_clear_handler", "Occupancy clear handler triggered");
+
+          // Get the current values of our presence sensors
+          bool pir = id(pir_presence).state;
+          bool radar = id(radar_presence).state;
+          bool light = id(light_presence).state;
+
+          // Determine if PIR counts (2nd bit of presence_type)
+          int pir_counts = (id(occupancy_clear_mode) & ( 1 << 2 )) >> 2;
+
+          // Determine if Radar counts (1st bit of presence_type)
+          int radar_counts = (id(occupancy_clear_mode) & ( 1 << 1 )) >> 1;
+
+          // Determine if Light counts (0th bit of presence_type)
+          int light_counts = (id(occupancy_clear_mode) & ( 1 << 0 )) >> 0;
+
+          // Determine our results
+          if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar & light
+            ESP_LOGD("occupancy_clear_handler", "PIR & Radar & Light: %i", pir & radar & light);
+            id(supersensor_occupancy).publish_state(pir & radar & light);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar
+            ESP_LOGD("occupancy_clear_handler", "PIR & Radar: %i", pir & radar);
+            id(supersensor_occupancy).publish_state(pir & radar);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & light
+            ESP_LOGD("occupancy_clear_handler", "PIR & Light: %i", pir & light);
+            id(supersensor_occupancy).publish_state(pir & light);
+          } else if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of radar & light
+            ESP_LOGD("occupancy_clear_handler", "Radar & Light: %i", radar & light);
+            id(supersensor_occupancy).publish_state(radar & light);
+          } else if (pir_counts) {
+            // Only pir
+            ESP_LOGD("occupancy_clear_handler", "PIR: %i", pir);
+            id(supersensor_occupancy).publish_state(pir);
+          } else if (radar_counts) {
+            // Only radar
+            ESP_LOGD("occupancy_clear_handler", "Radar: %i", radar);
+            id(supersensor_occupancy).publish_state(radar);
+          } else if (light_counts) {
+            // Only light
+            ESP_LOGD("occupancy_clear_handler", "Light: %i", light);
+            id(supersensor_occupancy).publish_state(light);
+          } else {
+            ESP_LOGD("occupancy_clear_handler", "None");
+            id(supersensor_occupancy).publish_state(false);
+          }
 
 logger:
   level: DEBUG
@@ -260,6 +396,11 @@ ld2410:
   # g8_still_threshold: 81
 
 binary_sensor:
+  - platform: template
+    name: "SuperSensor Occupancy"
+    id: supersensor_occupancy
+    device_class: occupancy
+
   - platform: gpio
     name: "PIR GPIO"
     id: pir_gpio
@@ -271,14 +412,32 @@ binary_sensor:
       - script.execute: pir_handler
 
   - platform: template
-    name: "PIR Motion"
-    id: pir_motion
+    name: "PIR Presence"
+    id: pir_presence
     device_class: motion
+    on_press:
+      - script.execute: occupancy_detect_handler
+    on_release:
+      - script.execute: occupancy_clear_handler
+
+  - platform: template
+    name: "Light Presence"
+    id: light_presence
+    device_class: motion
+    on_press:
+      - script.execute: occupancy_detect_handler
+    on_release:
+      - script.execute: occupancy_clear_handler
 
   - platform: ld2410
     ld2410_id: ld2410_radar
     has_target:
       name: "LD2410C Presence"
+      id: radar_presence
+      on_press:
+        - script.execute: occupancy_detect_handler
+      on_release:
+        - script.execute: occupancy_clear_handler
     has_moving_target:
       name: "LD2410C Moving Target"
     has_still_target:
@@ -305,8 +464,9 @@ sensor:
 
   - platform: tsl2591
     address: 0x29
-    update_interval: 5s
+    update_interval: 1s
     integration_time: 600ms
+    power_save_mode: no
     gain: medium
     device_factor: 53
     glass_attenuation_factor: 7.7
@@ -317,9 +477,11 @@ sensor:
     full_spectrum:
       name: "TSL2591 Full Spectrum Light"
     calculated_lux:
-      id: i_lux
+      id: tsl2591_lux
       name: "TSL2591 Illumination"
       unit_of_measurement: Lux
+      on_value:
+        - script.execute: light_handler
     actual_gain:
       id: "actual_gain"
       name: "TSL2591 Gain"
@@ -346,7 +508,7 @@ sensor:
     entity_category: diagnostic
 
   - platform: wifi_signal
-    name: "ESP32 WiFi RSSI"
+    name: "WiFi RSSI"
     icon: mdi:wifi-strength-2
     update_interval: 5s
     entity_category: diagnostic
@@ -382,17 +544,13 @@ sensor:
 text_sensor:
   - platform: wifi_info
     ip_address:
-      name: "ESP32 IP Address"
+      name: "WiFi IP Address"
     ssid:
-      name: "ESP32 Connected SSID"
+      name: "WiFi SSID"
     bssid:
-      name: "ESP32 Connected BSSID"
+      name: "WiFi BSSID"
     mac_address:
-      name: "ESP32 WiFi MAC Address"
-    scan_results:
-      name: "ESP32 Latest Scan Results"
-    dns_address:
-      name: "ESP32 DNS Address"
+      name: "WiFi MAC Address"
 
   - platform: ld2410
     version:
@@ -438,10 +596,46 @@ switch:
   - platform: ld2410
     engineering_mode:
       name: "LD2410C Engineering Mode"
+      entity_category: diagnostic
     bluetooth:
       name: "LD2410C Bluetooth"
+      entity_category: diagnostic
 
 number:
+  # PIR Hold Time:
+  # The number of seconds after motion detection for the PIR sensor to remain held on
+  - platform: template
+    name: "PIR Hold Time"
+    id: pir_hold_time_setter
+    optimistic: true
+    min_value: 0
+    max_value: 60
+    step: 5
+    restore_value: true
+    initial_value: 15
+    on_value:
+      then:
+        - globals.set:
+            id: pir_hold_time
+            value: !lambda 'return int(x);'
+
+  # Light Presence Threshold
+  # The minimum Lux value to consider presence based on the ambient light level
+  - platform: template
+    name: "Light Presence Threshold"
+    id: light_presence_threshold_setter
+    optimistic: true
+    min_value: 0
+    max_value: 500
+    step: 5
+    restore_value: true
+    initial_value: 30
+    on_value:
+      then:
+        - globals.set:
+            id: light_presence_threshold
+            value: !lambda 'return int(x);'
+
   - platform: ld2410
     timeout:
       name: "LD2410C Timeout"
@@ -498,6 +692,131 @@ number:
         name: "LD2410C Gate8 Still Threshold"
 
 select:
+
+  # Occupancy Detect Mode:
+  # This selector defines the detection mode for the integrated occupancy sensor. Depending on the
+  # selected option, only the given sensor(s) will be used to judge when occupancy begins (i.e.
+  # when the given sensor(s) detect, occupancy detects).
+  #  * PIR + Radar + Light:
+  #    All 3 sensors reporting detection simultaneously will begin occupancy
+  #  * PIR + Radar
+  #    Both PIR and Radar sensors reporting detection simultaneously will begin occupancy
+  #  * PIR + Light
+  #    Both PIR and Light sensors reporting detection simultaneously will begin occupancy
+  #  * Radar + Light
+  #    Both Radar and Light sensors reporting detection simultaneously will begin occupancy
+  #  * PIR Only
+  #    PIR sensor reporting detection will begin occupancy
+  #  * Radar Only
+  #    Radar sensor reporting detection will begin occupancy
+  #  * Light Only
+  #    Light sensor reporting detection will begin occupancy
+  #  * None
+  #    No sensors will begin occupancy and the integrated occupancy functionality is disabled
+  # Values are reported as integers using bitwise logic:
+  #  Bit 2: PIR
+  #  Bit 1: Radar
+  #  Bit 0: Light
+  - platform: template
+    name: "Occupancy Detect Mode"
+    id: occupancy_detect_mode_setter
+    options:
+      - "PIR + Radar + Light"   # 111 = 7
+      - "PIR + Radar"           # 110 = 6
+      - "PIR + Light"           # 101 = 5
+      - "Radar + Light"         # 011 = 3
+      - "PIR Only"              # 100 = 4
+      - "Radar Only"            # 010 = 2
+      - "Light Only"            # 001 = 1
+      - "None"                  # 000 = 0
+    initial_option: "None"
+    optimistic: yes
+    restore_value: yes
+    set_action:
+      - globals.set:
+          id: occupancy_detect_mode
+          value: !lambda |-
+            ESP_LOGD("occupancy_detect_mode_setter", x.c_str());
+            if (x == "PIR + Radar + Light") {
+              return 7;
+            } else if (x == "PIR + Radar") {
+              return 6;
+            } else if (x == "PIR + Light") {
+              return 5;
+            } else if (x == "Radar + Light") {
+              return 3;
+            } else if (x == "PIR Only") {
+              return 4;
+            } else if (x == "Radar Only") {
+              return 2;
+            } else if (x == "Light Only") {
+              return 1;
+            } else {
+              return 0;
+            }
+
+  # Occupancy Clear Mode:
+  # This selector defines the clear mode for the integrated occupancy sensor. Depending on the
+  # selected option, only the given sensor(s) will be used to judge when occupancy ends (i.e.
+  # when the given sensor(s) clear, occupancy clears).
+  #  * PIR + Radar + Light:
+  #    Any of the 3 sensors clearing will end occupancy
+  #  * PIR + Radar:
+  #    Either of the PIR or Radar sensors clearing will end occupancy
+  #  * PIR + Light:
+  #    Either of the PIR or Light sensors clearing will end occupancy
+  #  * Radar + Light:
+  #    Either of the Radar or Light sensors clearing will end occupancy
+  #  * PIR Only
+  #    PIR sensor clearing will end occupancy
+  #  * Radar Only
+  #    Radar sensor clearing will end occupancy
+  #  * Light Only
+  #    Light sensor clearing will end occupancy
+  #  * None
+  #    No sensors will end occupancy; state will persist indefinitely once triggered
+  # Values are reported as integers using bitwise logic:
+  #  Bit 0: PIR
+  #  Bit 1: Radar
+  #  Bit 2: Light
+  - platform: template
+    name: "Occupancy Clear Mode"
+    id: occupancy_clear_mode_setter
+    options:
+      - "PIR + Radar + Light"   # 111 = 7
+      - "PIR + Radar"           # 110 = 6
+      - "PIR + Light"           # 101 = 5
+      - "Radar + Light"         # 011 = 3
+      - "PIR Only"              # 100 = 4
+      - "Radar Only"            # 010 = 2
+      - "Light Only"            # 001 = 1
+      - "None"                  # 000 = 0
+    initial_option: "None"
+    optimistic: yes
+    restore_value: yes
+    set_action:
+      - globals.set:
+          id: occupancy_clear_mode
+          value: !lambda |-
+            ESP_LOGD("occupancy_detect_mode_setter", x.c_str());
+            if (x == "PIR + Radar + Light") {
+              return 7;
+            } else if (x == "PIR + Radar") {
+              return 6;
+            } else if (x == "PIR + Light") {
+              return 5;
+            } else if (x == "Radar + Light") {
+              return 3;
+            } else if (x == "PIR Only") {
+              return 4;
+            } else if (x == "Radar Only") {
+              return 2;
+            } else if (x == "Light Only") {
+              return 1;
+            } else {
+              return 0;
+            }
+
   - platform: ld2410
     distance_resolution:
       name: "LD2410C Distance Resolution"
