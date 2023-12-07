@@ -607,13 +607,12 @@ number:
   - platform: template
     name: "PIR Hold Time"
     id: pir_hold_time_setter
-    optimistic: true
     min_value: 0
     max_value: 60
     step: 5
-    restore_value: true
-    initial_value: 15
-    on_value:
+    lambda: |-
+      return id(pir_hold_time);
+    set_action:
       then:
         - globals.set:
             id: pir_hold_time
@@ -624,13 +623,12 @@ number:
   - platform: template
     name: "Light Presence Threshold"
     id: light_presence_threshold_setter
-    optimistic: true
     min_value: 0
     max_value: 200
     step: 5
-    restore_value: true
-    initial_value: 30
-    on_value:
+    lambda: |-
+      return id(light_presence_threshold);
+    set_action:
       then:
         - globals.set:
             id: light_presence_threshold
