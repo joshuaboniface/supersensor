@@ -61,7 +61,7 @@ of say 30 lux: then, while the light is on, "light presence" is detected,
 and when the light is off, "light presence" is cleared. Light presence can
 be used standalone or as part of the integrated occupancy sensor (below).
 
-Valid range is 0 lux (always on) to 500 lux, in 5 lux increments.
+Valid range is 0 lux (always on) to 200 lux, in 5 lux increments.
 Default value is 30 lux.
 
 ### PIR Hold Time

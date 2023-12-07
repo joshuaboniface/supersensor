@@ -626,7 +626,7 @@ number:
     id: light_presence_threshold_setter
     optimistic: true
     min_value: 0
-    max_value: 500
+    max_value: 200
     step: 5
     restore_value: true
     initial_value: 30
