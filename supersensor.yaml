@@ -465,9 +465,9 @@ sensor:
   - platform: tsl2591
     address: 0x29
     update_interval: 1s
-    integration_time: 600ms
+    integration_time: 200ms
     power_save_mode: no
-    gain: medium
+    gain: auto
     device_factor: 53
     glass_attenuation_factor: 7.7
     visible:
