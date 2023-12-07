@@ -471,11 +471,11 @@ sensor:
     device_factor: 53
     glass_attenuation_factor: 7.7
     visible:
-      name: "TSL2591 Visible Light"
+      name: "TSL2591 Raw Visible"
     infrared:
-      name: "TSL2591 Infrared Light"
+      name: "TSL2591 Raw Infrared"
     full_spectrum:
-      name: "TSL2591 Full Spectrum Light"
+      name: "TSL2591 Raw Full Spectrum"
     calculated_lux:
       id: tsl2591_lux
       name: "TSL2591 Illumination"
