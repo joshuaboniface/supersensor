@@ -126,15 +126,15 @@ script:
             // Logical AND of pir & radar & light
             ESP_LOGD("occupancy_detect_handler", "PIR & Radar & Light: %i", pir & radar & light);
             id(supersensor_occupancy).publish_state(pir & radar & light);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (pir_counts & radar_counts) {
             // Logical AND of pir & radar
             ESP_LOGD("occupancy_detect_handler", "PIR & Radar: %i", pir & radar);
             id(supersensor_occupancy).publish_state(pir & radar);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (pir_counts & light_counts) {
             // Logical AND of pir & light
             ESP_LOGD("occupancy_detect_handler", "PIR & Light: %i", pir & light);
             id(supersensor_occupancy).publish_state(pir & light);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (radar_counts & light_counts) {
             // Logical AND of radar & light
             ESP_LOGD("occupancy_detect_handler", "Radar & Light: %i", radar & light);
             id(supersensor_occupancy).publish_state(radar & light);
@@ -179,15 +179,15 @@ script:
             // Logical AND of pir & radar & light
             ESP_LOGD("occupancy_clear_handler", "PIR & Radar & Light: %i", pir & radar & light);
             id(supersensor_occupancy).publish_state(pir & radar & light);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (pir_counts & radar_counts) {
             // Logical AND of pir & radar
             ESP_LOGD("occupancy_clear_handler", "PIR & Radar: %i", pir & radar);
             id(supersensor_occupancy).publish_state(pir & radar);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (pir_counts & light_counts) {
             // Logical AND of pir & light
             ESP_LOGD("occupancy_clear_handler", "PIR & Light: %i", pir & light);
             id(supersensor_occupancy).publish_state(pir & light);
-          } else if (pir_counts & radar_counts & light_counts) {
+          } else if (radar_counts & light_counts) {
             // Logical AND of radar & light
             ESP_LOGD("occupancy_clear_handler", "Radar & Light: %i", radar & light);
             id(supersensor_occupancy).publish_state(radar & light);
