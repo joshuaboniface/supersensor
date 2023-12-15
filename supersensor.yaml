@@ -36,10 +36,7 @@ esphome:
             id(light_presence).publish_state(false);
         - light.turn_on:
             id: output_led
-            effect: flash
-            red: 1
-            green: 1
-            blue: 1
+            effect: flash_white
 
 dashboard_import:
   package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
@@ -218,10 +215,7 @@ api:
   on_client_disconnected:
     - light.turn_on:
         id: output_led
-        effect: flash
-        red: 1
-        green: 1
-        blue: 1
+        effect: flash_white
     - switch.turn_off: use_wake_word
   on_client_connected:
     # This absolute absurdity is required to prevent
@@ -254,8 +248,8 @@ wifi:
 
 uart:
   id: ld2410_uart
-  rx_pin: GPIO18
-  tx_pin: GPIO19
+  rx_pin: GPIO19
+  tx_pin: GPIO18
   baud_rate: 256000
   data_bits: 8
   stop_bits: 1
@@ -267,8 +261,8 @@ i2c:
   scan: true
 
 i2s_audio:
-  i2s_lrclk_pin: GPIO27
-  i2s_bclk_pin: GPIO26
+  i2s_lrclk_pin: GPIO26
+  i2s_bclk_pin: GPIO27
 
 microphone:
   - platform: i2s_audio
@@ -344,9 +338,13 @@ light:
     flash_transition_length: 0.15s
     effects:
       - strobe:
-          name: flash
+          name: flash_white
           colors:
             - state: true
+              brightness: 50%
+              red: 40%
+              green: 45%
+              blue: 50%
               duration: 0.5s
             - state: false
               duration: 0.5s
@@ -362,12 +360,15 @@ output:
   - platform: ledc
     id: rgb_r
     pin: GPIO32
+    inverted: true
   - platform: ledc
     id: rgb_g
     pin: GPIO33
+    inverted: true
   - platform: ledc
     id: rgb_b
     pin: GPIO25
+    inverted: true
 
 ld2410:
   id: ld2410_radar
@@ -445,23 +446,35 @@ binary_sensor:
       name: "LD2410C Still Target"
 
 sensor:
-#  - platform: bme280
-#    temperature:
-#      name: "BME280 Temperature"
-#    pressure:
-#      name: "BME280 Pressure"
-#    humidity:
-#      name: "BME280 Humidity"
-#    update_interval: 15s
-#    address: 0x76
-
-  - platform: bmp280
+  - platform: bme680
     temperature:
-      name: "BMP280 Temperature"
+      name: "BME680 Temperature"
+      id: bme680_temperature
     pressure:
-      name: "BMP280 Pressure"
+      name: "BME680 Pressure"
+      id: bme680_pressure
+    humidity:
+      name: "BME680 Relative Humidity"
+      id: bme680_humidity
+    gas_resistance:
+      name: "BME680 Gas Resistance"
+      id: bme680_gas_resistance
+      internal: yes
+    address: 0x77
     update_interval: 5s
-    address: 0x76
+
+  - platform: absolute_humidity
+    name: "BME680 Absolute Humidity"
+    temperature: bme680_temperature
+    humidity: bme680_humidity
+
+  - platform: template
+    name: "BME680 Indoor Air Quality"
+    id: bme680_iaq
+    icon: "mdi:gauge"
+    # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
+    lambda: |-
+      return log(id(bme680_gas_resistance).state) + 0.04 *  id(bme680_humidity).state;
 
   - platform: tsl2591
     address: 0x29
@@ -543,6 +556,35 @@ sensor:
     entity_category: diagnostic
 
 text_sensor:
+  - platform: template
+    name: "BME680 IAQ Classification"
+    icon: "mdi:checkbox-marked-circle-outline"
+    lambda: |-
+      if (int(id(bme680_iaq).state) <= 50) {
+        return {"Excellent"};
+      }
+      else if (int(id(bme680_iaq).state) <= 100) {
+        return {"Good"};
+      }
+      else if (int(id(bme680_iaq).state) <= 150) {
+        return {"Lightly polluted"};
+      }
+      else if (int(id(bme680_iaq).state) <= 200) {
+        return {"Moderately polluted"};
+      }
+      else if (int(id(bme680_iaq).state) <= 250) {
+        return {"Heavily polluted"};
+      }
+      else if (int(id(bme680_iaq).state) <= 350) {
+        return {"Severely polluted"};
+      }
+      else if (int(id(bme680_iaq).state) <= 500) {
+        return {"Extremely polluted"};
+      }
+      else {
+        return {"Unknown"};
+      }
+
   - platform: wifi_info
     ip_address:
       name: "WiFi IP Address"
