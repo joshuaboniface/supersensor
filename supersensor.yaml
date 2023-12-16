@@ -474,7 +474,7 @@ sensor:
     icon: "mdi:gauge"
     # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
     lambda: |-
-      return log(id(bme680_gas_resistance).state) + 0.04 *  id(bme680_humidity).state;
+      return float(log(id(bme680_gas_resistance).state) + 0.04 *  id(bme680_humidity).state);
 
   - platform: tsl2591
     address: 0x29
