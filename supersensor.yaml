@@ -342,9 +342,9 @@ light:
           colors:
             - state: true
               brightness: 50%
-              red: 40%
-              green: 45%
-              blue: 50%
+              red: 100%
+              green: 100%
+              blue: 100%
               duration: 0.5s
             - state: false
               duration: 0.5s
@@ -360,15 +360,12 @@ output:
   - platform: ledc
     id: rgb_r
     pin: GPIO32
-    inverted: true
   - platform: ledc
     id: rgb_g
     pin: GPIO33
-    inverted: true
   - platform: ledc
     id: rgb_b
     pin: GPIO25
-    inverted: true
 
 ld2410:
   id: ld2410_radar
