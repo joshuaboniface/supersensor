@@ -44,17 +44,6 @@ dashboard_import:
 
 esp32:
   board: esp32dev
-  framework:
-    type: esp-idf
-    sdkconfig_options:
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
 globals:
   - id: pir_hold_time
@@ -367,6 +356,13 @@ output:
     id: rgb_b
     pin: GPIO25
 
+bme680_bsec:
+  address: 0x77
+  id: bme680_sensor
+  sample_rate: lp
+  state_save_interval: 1h
+  iaq_mode: static
+
 ld2410:
   id: ld2410_radar
   uart_id: ld2410_uart
@@ -443,7 +439,8 @@ binary_sensor:
       name: "LD2410C Still Target"
 
 sensor:
-  - platform: bme680
+  - platform: bme680_bsec
+    bme680_bsec_id: bme680_sensor
     temperature:
       name: "BME680 Temperature"
       id: bme680_temperature
@@ -453,25 +450,22 @@ sensor:
     humidity:
       name: "BME680 Relative Humidity"
       id: bme680_humidity
+    iaq:
+      name: "BME680 IAQ"
+      id: bme680_iaq
+    co2_equivalent:
+      name: "BME680 CO2 Equivalent"
+    breath_voc_equivalent:
+      name: "BME680 Breath VOC Equivalent"
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
       internal: yes
-    address: 0x77
-    update_interval: 5s
 
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
     temperature: bme680_temperature
     humidity: bme680_humidity
-
-  - platform: template
-    name: "BME680 Indoor Air Quality"
-    id: bme680_iaq
-    icon: "mdi:gauge"
-    # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
-    lambda: |-
-      return float(log(id(bme680_gas_resistance).state) + 0.04 * id(bme680_humidity).state);
 
   - platform: tsl2591
     address: 0x29
@@ -502,15 +496,20 @@ sensor:
     moving_distance:
       name: "LD2410C Moving Distance"
       id: moving_distance
+      icon: mdi:signal-distance-variant
     still_distance:
       name: "LD2410C Still Distance"
       id: still_distance
+      icon: mdi:signal-distance-variant
     moving_energy:
       name: "LD2410C Move Energy"
+      icon: mdi:flash
     still_energy:
       name: "LD2410C Still Energy"
+      icon: mdi:flash
     detection_distance:
       name: "LD2410C Presence Distance"
+      icon: mdi:signal-distance-variant
 
   - platform: uptime
     name: "ESP32 Uptime"
@@ -553,33 +552,40 @@ sensor:
     entity_category: diagnostic
 
 text_sensor:
+  - platform: bme680_bsec
+    bme680_bsec_id: bme680_sensor
+    iaq_accuracy:
+      name: "BME680 IAQ Accuracy"
+
   - platform: template
     name: "BME680 IAQ Classification"
-    icon: "mdi:checkbox-marked-circle-outline"
+    icon: "mdi:air-filter"
+    update_interval: 15s
     lambda: |-
-      if (int(id(bme680_iaq).state) <= 50) {
-        return {"Excellent"};
+      int iaq = int(id(bme680_iaq).state);
+      if (iaq <= 50) {
+        return {"Excellent (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 100) {
-        return {"Good"};
+      else if (iaq <= 100) {
+        return {"Good (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 150) {
-        return {"Lightly polluted"};
+      else if (iaq <= 150) {
+        return {"Fair (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 200) {
-        return {"Moderately polluted"};
+      else if (iaq <= 200) {
+        return {"Moderate (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 250) {
-        return {"Heavily polluted"};
+      else if (iaq <= 250) {
+        return {"Bad (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 350) {
-        return {"Severely polluted"};
+      else if (iaq <= 350) {
+        return {"Very Bad (" + to_string(iaq) + ")"};
       }
-      else if (int(id(bme680_iaq).state) <= 500) {
-        return {"Extremely polluted"};
+      else if (iaq <= 500) {
+        return {"Terrible (" + to_string(iaq) + ")"};
       }
       else {
-        return {"Unknown"};
+        return {"Unknown (" + to_string(iaq) + ")"};
       }
 
   - platform: wifi_info

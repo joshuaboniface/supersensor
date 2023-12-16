@@ -1,0 +1,861 @@
+---
+
+###############################################################################
+# SuperSensor v1.0 ESPHome configuration
+###############################################################################
+#
+#    Copyright (C) 2023 Joshua M. Boniface <joshua@boniface.me>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+###############################################################################
+
+esphome:
+  name: supersensor
+  name_add_mac_suffix: true
+  friendly_name: "Supersensor"
+  project:
+    name: joshuaboniface.supersensor
+    version: "0.1"
+  on_boot:
+    - priority: 600
+      then:
+        - lambda: |-
+            id(supersensor_occupancy).publish_state(false);
+            id(pir_presence).publish_state(false);
+            id(light_presence).publish_state(false);
+        - light.turn_on:
+            id: output_led
+            effect: flash_white
+
+dashboard_import:
+  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
+  import_full_config: false
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+globals:
+  - id: pir_hold_time
+    type: int
+    restore_value: yes
+    initial_value: "15"
+
+  - id: light_presence_threshold
+    type: int
+    restore_value: yes
+    initial_value: "30"
+
+  - id: occupancy_detect_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+
+  - id: occupancy_clear_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+
+script:
+  - id: pir_handler
+    then:
+      - lambda: |-
+          id(pir_presence).publish_state(true);
+      - while:
+          condition:
+            binary_sensor.is_on: pir_gpio
+          then:
+            - delay: !lambda 'return(id(pir_hold_time) * 1000);'
+      - lambda: |-
+          id(pir_presence).publish_state(false);
+
+  - id: light_handler
+    then:
+      - lambda: |-
+          if (id(tsl2591_lux).state >= id(light_presence_threshold)) {
+            id(light_presence).publish_state(true);
+          } else {
+            id(light_presence).publish_state(false);
+          }
+
+  - id: occupancy_detect_handler
+    then:
+      - lambda: |-
+          ESP_LOGD("occupancy_detect_handler", "Occupancy detect handler triggered");
+
+          // Get the current values of our presence sensors
+          bool pir = id(pir_presence).state;
+          bool radar = id(radar_presence).state;
+          bool light = id(light_presence).state;
+
+          // Determine if PIR counts (2nd bit of presence_type)
+          int pir_counts = (id(occupancy_detect_mode) & ( 1 << 2 )) >> 2;
+
+          // Determine if Radar counts (1st bit of presence_type)
+          int radar_counts = (id(occupancy_detect_mode) & ( 1 << 1 )) >> 1;
+
+          // Determine if Light counts (0th bit of presence_type)
+          int light_counts = (id(occupancy_detect_mode) & ( 1 << 0 )) >> 0;
+
+          // Determine our results
+          if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar & light
+            ESP_LOGD("occupancy_detect_handler", "PIR & Radar & Light: %i", pir & radar & light);
+            id(supersensor_occupancy).publish_state(pir & radar & light);
+          } else if (pir_counts & radar_counts) {
+            // Logical AND of pir & radar
+            ESP_LOGD("occupancy_detect_handler", "PIR & Radar: %i", pir & radar);
+            id(supersensor_occupancy).publish_state(pir & radar);
+          } else if (pir_counts & light_counts) {
+            // Logical AND of pir & light
+            ESP_LOGD("occupancy_detect_handler", "PIR & Light: %i", pir & light);
+            id(supersensor_occupancy).publish_state(pir & light);
+          } else if (radar_counts & light_counts) {
+            // Logical AND of radar & light
+            ESP_LOGD("occupancy_detect_handler", "Radar & Light: %i", radar & light);
+            id(supersensor_occupancy).publish_state(radar & light);
+          } else if (pir_counts) {
+            // Only pir
+            ESP_LOGD("occupancy_detect_handler", "PIR: %i", pir);
+            id(supersensor_occupancy).publish_state(pir);
+          } else if (radar_counts) {
+            // Only radar
+            ESP_LOGD("occupancy_detect_handler", "Radar: %i", radar);
+            id(supersensor_occupancy).publish_state(radar);
+          } else if (light_counts) {
+            // Only light
+            ESP_LOGD("occupancy_detect_handler", "Light: %i", light);
+            id(supersensor_occupancy).publish_state(light);
+          } else {
+            ESP_LOGD("occupancy_detect_handler", "None");
+            id(supersensor_occupancy).publish_state(false);
+          }
+
+  - id: occupancy_clear_handler
+    then:
+      - lambda: |-
+          ESP_LOGD("occupancy_clear_handler", "Occupancy clear handler triggered");
+
+          // Get the current values of our presence sensors
+          bool pir = id(pir_presence).state;
+          bool radar = id(radar_presence).state;
+          bool light = id(light_presence).state;
+
+          // Determine if PIR counts (2nd bit of presence_type)
+          int pir_counts = (id(occupancy_clear_mode) & ( 1 << 2 )) >> 2;
+
+          // Determine if Radar counts (1st bit of presence_type)
+          int radar_counts = (id(occupancy_clear_mode) & ( 1 << 1 )) >> 1;
+
+          // Determine if Light counts (0th bit of presence_type)
+          int light_counts = (id(occupancy_clear_mode) & ( 1 << 0 )) >> 0;
+
+          // Determine our results
+          if (pir_counts & radar_counts & light_counts) {
+            // Logical AND of pir & radar & light
+            ESP_LOGD("occupancy_clear_handler", "PIR & Radar & Light: %i", pir & radar & light);
+            id(supersensor_occupancy).publish_state(pir & radar & light);
+          } else if (pir_counts & radar_counts) {
+            // Logical AND of pir & radar
+            ESP_LOGD("occupancy_clear_handler", "PIR & Radar: %i", pir & radar);
+            id(supersensor_occupancy).publish_state(pir & radar);
+          } else if (pir_counts & light_counts) {
+            // Logical AND of pir & light
+            ESP_LOGD("occupancy_clear_handler", "PIR & Light: %i", pir & light);
+            id(supersensor_occupancy).publish_state(pir & light);
+          } else if (radar_counts & light_counts) {
+            // Logical AND of radar & light
+            ESP_LOGD("occupancy_clear_handler", "Radar & Light: %i", radar & light);
+            id(supersensor_occupancy).publish_state(radar & light);
+          } else if (pir_counts) {
+            // Only pir
+            ESP_LOGD("occupancy_clear_handler", "PIR: %i", pir);
+            id(supersensor_occupancy).publish_state(pir);
+          } else if (radar_counts) {
+            // Only radar
+            ESP_LOGD("occupancy_clear_handler", "Radar: %i", radar);
+            id(supersensor_occupancy).publish_state(radar);
+          } else if (light_counts) {
+            // Only light
+            ESP_LOGD("occupancy_clear_handler", "Light: %i", light);
+            id(supersensor_occupancy).publish_state(light);
+          } else {
+            ESP_LOGD("occupancy_clear_handler", "None");
+            id(supersensor_occupancy).publish_state(false);
+          }
+
+logger:
+  level: DEBUG
+  baud_rate: 115200
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  on_client_disconnected:
+    - light.turn_on:
+        id: output_led
+        effect: flash_white
+    - switch.turn_off: use_wake_word
+  on_client_connected:
+    # This absolute absurdity is required to prevent
+    # "no wake word detected" failure loops.
+    - switch.turn_on: use_wake_word
+    - delay: 2s
+    - switch.turn_off: use_wake_word
+    - delay: 2s
+    - switch.turn_on: use_wake_word
+    - delay: 2s
+    - light.turn_off:
+        id: output_led
+
+ota:
+  password: !secret ota_password
+  safe_mode: false
+
+web_server:
+  port: 80
+  auth:
+    username: !secret web_auth_username
+    password: !secret web_auth_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: !secret wifi_domain
+  power_save_mode: LIGHT
+  reboot_timeout: 5min
+
+uart:
+  id: ld2410_uart
+  rx_pin: GPIO19
+  tx_pin: GPIO18
+  baud_rate: 256000
+  data_bits: 8
+  stop_bits: 1
+  parity: NONE
+
+i2c:
+  sda: GPIO16
+  scl: GPIO17
+  scan: true
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO26
+  i2s_bclk_pin: GPIO27
+
+microphone:
+  - platform: i2s_audio
+    id: mic
+    adc_type: external
+    i2s_din_pin: GPIO14
+    pdm: false
+
+voice_assistant:
+  microphone: mic
+  use_wake_word: false
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 4.0
+  id: assist
+  on_error:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
+    - logger.log: "Voice Assistant encountered an error; restarting it"
+    - switch.turn_off: use_wake_word
+    - delay: 1s
+    - switch.turn_on: use_wake_word
+  on_wake_word_detected:
+    - light.turn_off:
+        id: output_led
+    - light.turn_on:
+        id: output_led
+        red: 0
+        green: 0
+        blue: 1
+  on_listening:
+    - light.turn_on:
+        id: output_led
+        red: 0
+        green: 0
+        blue: 1
+  on_stt_end:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
+  on_tts_start:
+    - light.turn_off:
+        id: output_led
+        transition_length: 1s
+    - if:
+        condition:
+          lambda: return x != "Sorry, I couldn't understand that";
+        then:
+          - logger.log: "Command successful!"
+          - light.turn_on:
+              id: output_led
+              effect: hold
+              red: 0
+              green: 1
+              blue: 0
+        else:
+          - logger.log: "Command failed!"
+          - light.turn_on:
+              id: output_led
+              effect: hold
+              red: 1
+              green: 0
+              blue: 0 
+
+light:
+  - platform: rgb
+    id: output_led
+    red: rgb_r
+    green: rgb_g
+    blue: rgb_b
+    default_transition_length: 0.15s
+    flash_transition_length: 0.15s
+    effects:
+      - strobe:
+          name: flash_white
+          colors:
+            - state: true
+              brightness: 50%
+              red: 100%
+              green: 100%
+              blue: 100%
+              duration: 0.5s
+            - state: false
+              duration: 0.5s
+      - automation:
+          name: hold
+          sequence:
+            - delay: 5s
+            - light.turn_off:
+                id: output_led
+                transition_length: 1s
+  
+output:
+  - platform: ledc
+    id: rgb_r
+    pin: GPIO32
+  - platform: ledc
+    id: rgb_g
+    pin: GPIO33
+  - platform: ledc
+    id: rgb_b
+    pin: GPIO25
+
+ld2410:
+  id: ld2410_radar
+  uart_id: ld2410_uart
+  # These default values are captured here for
+  # posterity. They are configured below.
+  # max_move_distance : 6m
+  # max_still_distance: 0.75m
+  # g0_move_threshold: 10
+  # g0_still_threshold: 20
+  # g1_move_threshold: 10
+  # g1_still_threshold: 20
+  # g2_move_threshold: 20
+  # g2_still_threshold: 21
+  # g3_move_threshold: 30
+  # g3_still_threshold: 31
+  # g4_move_threshold: 40
+  # g4_still_threshold: 41
+  # g5_move_threshold: 50
+  # g5_still_threshold: 51
+  # g6_move_threshold: 60
+  # g6_still_threshold: 61
+  # g7_move_threshold: 70
+  # g7_still_threshold: 71
+  # g8_move_threshold: 80
+  # g8_still_threshold: 81
+
+binary_sensor:
+  - platform: template
+    name: "SuperSensor Occupancy"
+    id: supersensor_occupancy
+    device_class: occupancy
+
+  - platform: gpio
+    name: "PIR GPIO"
+    id: pir_gpio
+    pin: GPIO13
+    internal: false
+    device_class: motion
+    on_press:
+      - script.stop: pir_handler
+      - script.execute: pir_handler
+
+  - platform: template
+    name: "PIR Presence"
+    id: pir_presence
+    device_class: motion
+    on_press:
+      - script.execute: occupancy_detect_handler
+    on_release:
+      - script.execute: occupancy_clear_handler
+
+  - platform: template
+    name: "Light Presence"
+    id: light_presence
+    device_class: motion
+    on_press:
+      - script.execute: occupancy_detect_handler
+    on_release:
+      - script.execute: occupancy_clear_handler
+
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    has_target:
+      name: "LD2410C Presence"
+      id: radar_presence
+      device_class: motion
+      on_press:
+        - script.execute: occupancy_detect_handler
+      on_release:
+        - script.execute: occupancy_clear_handler
+    has_moving_target:
+      name: "LD2410C Moving Target"
+    has_still_target:
+      name: "LD2410C Still Target"
+
+sensor:
+  - platform: bme680
+    temperature:
+      name: "BME680 Temperature"
+      id: bme680_temperature
+    pressure:
+      name: "BME680 Pressure"
+      id: bme680_pressure
+    humidity:
+      name: "BME680 Relative Humidity"
+      id: bme680_humidity
+    gas_resistance:
+      name: "BME680 Gas Resistance"
+      id: bme680_gas_resistance
+    address: 0x77
+    update_interval: 5s
+
+  - platform: absolute_humidity
+    name: "BME680 Absolute Humidity"
+    temperature: bme680_temperature
+    humidity: bme680_humidity
+
+  - platform: template
+    name: "BME680 Indoor Air Quality"
+    id: bme680_iaq
+    icon: "mdi:gauge"
+    # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
+    lambda: |-
+      return float(log(id(bme680_gas_resistance).state) + 0.04 * id(bme680_humidity).state);
+
+  - platform: tsl2591
+    address: 0x29
+    update_interval: 1s
+    integration_time: 200ms
+    power_save_mode: no
+    gain: auto
+    device_factor: 53
+    glass_attenuation_factor: 7.7
+    visible:
+      name: "TSL2591 Raw Visible"
+    infrared:
+      name: "TSL2591 Raw Infrared"
+    full_spectrum:
+      name: "TSL2591 Raw Full Spectrum"
+    calculated_lux:
+      id: tsl2591_lux
+      name: "TSL2591 Illumination"
+      unit_of_measurement: Lux
+      on_value:
+        - script.execute: light_handler
+    actual_gain:
+      id: "actual_gain"
+      name: "TSL2591 Gain"
+
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    moving_distance:
+      name: "LD2410C Moving Distance"
+      id: moving_distance
+    still_distance:
+      name: "LD2410C Still Distance"
+      id: still_distance
+    moving_energy:
+      name: "LD2410C Move Energy"
+    still_energy:
+      name: "LD2410C Still Energy"
+    detection_distance:
+      name: "LD2410C Presence Distance"
+
+  - platform: uptime
+    name: "ESP32 Uptime"
+    icon: mdi:clock-alert
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    icon: mdi:wifi-strength-2
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: internal_temperature
+    name: "ESP32 Temperature"
+    icon: mdi:thermometer
+    unit_of_measurement: °C
+    device_class: TEMPERATURE
+    update_interval: 5s
+    entity_category: diagnostic
+
+  - platform: template
+    name: "ESP32 CPU Frequency"
+    icon: mdi:cpu-32-bit
+    accuracy_decimals: 1
+    unit_of_measurement: MHz
+    update_interval: 5s
+    lambda: |-
+      return ets_get_cpu_frequency();
+    entity_category: diagnostic
+
+  - platform: template
+    name: "ESP32 Free Memory"
+    icon: mdi:memory
+    unit_of_measurement: 'kB'
+    state_class: measurement
+    update_interval: 5s
+    lambda: |-
+      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: template
+    name: "BME680 IAQ Classification"
+    icon: "mdi:air-filter"
+    update_interval: 15s
+    lambda: |-
+      int iaq = int(id(bme680_iaq).state);
+      if (iaq <= 50) {
+        return {"Excellent (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 100) {
+        return {"Good (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 150) {
+        return {"Fair (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 200) {
+        return {"Moderate (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 250) {
+        return {"Bad (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 350) {
+        return {"Very Bad (" + to_string(iaq) + ")"};
+      }
+      else if (iaq <= 500) {
+        return {"Terrible (" + to_string(iaq) + ")"};
+      }
+      else {
+        return {"Unknown (" + to_string(iaq) + ")"};
+      }
+
+  - platform: wifi_info
+    ip_address:
+      name: "WiFi IP Address"
+    ssid:
+      name: "WiFi SSID"
+    bssid:
+      name: "WiFi BSSID"
+    mac_address:
+      name: "WiFi MAC Address"
+
+  - platform: ld2410
+    version:
+      name: "LD2410C Firmware Version"
+    mac_address:
+      name: "LD2410C MAC Address"
+
+button:
+  - platform: ld2410
+    restart:
+      name: "LD2410C Restart"
+      icon: mdi:power-cycle
+      entity_category: diagnostic
+    factory_reset:
+      name: "LD2410C Factory Reset"
+      entity_category: diagnostic
+
+  - platform: restart
+    name: "ESP32 Restart"
+    icon: mdi:power-cycle
+    entity_category: diagnostic
+
+switch:
+  - platform: template
+    name: "Enable Wake Word"
+    icon: mdi:account-voice
+    id: use_wake_word
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+    on_turn_on:
+      - lambda: id(assist).set_use_wake_word(true);
+      - if:
+          condition:
+            not:
+              - voice_assistant.is_running
+          then:
+            - voice_assistant.start_continuous
+    on_turn_off:
+      - voice_assistant.stop
+      - lambda: id(assist).set_use_wake_word(false);
+
+  - platform: ld2410
+    engineering_mode:
+      name: "LD2410C Engineering Mode"
+      entity_category: diagnostic
+    bluetooth:
+      name: "LD2410C Bluetooth"
+      entity_category: diagnostic
+
+number:
+  # PIR Hold Time:
+  # The number of seconds after motion detection for the PIR sensor to remain held on
+  - platform: template
+    name: "PIR Hold Time"
+    id: pir_hold_time_setter
+    min_value: 0
+    max_value: 60
+    step: 5
+    lambda: |-
+      return id(pir_hold_time);
+    set_action:
+      then:
+        - globals.set:
+            id: pir_hold_time
+            value: !lambda 'return int(x);'
+
+  # Light Presence Threshold
+  # The minimum Lux value to consider presence based on the ambient light level
+  - platform: template
+    name: "Light Presence Threshold"
+    id: light_presence_threshold_setter
+    min_value: 0
+    max_value: 200
+    step: 5
+    lambda: |-
+      return id(light_presence_threshold);
+    set_action:
+      then:
+        - globals.set:
+            id: light_presence_threshold
+            value: !lambda 'return int(x);'
+
+  - platform: ld2410
+    timeout:
+      name: "LD2410C Timeout"
+    light_threshold:
+      name: "LD2410C Light Threshold"
+    max_move_distance_gate:
+      name: "LD2410C Max Move Distance Gate"
+    max_still_distance_gate:
+      name: "LD2410C Max Still Distance Gate"
+    g0:
+      move_threshold:
+        name: "LD2410C Gate0 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate0 Still Threshold"
+    g1:
+      move_threshold:
+        name: "LD2410C Gate1 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate1 Still Threshold"
+    g2:
+      move_threshold:
+        name: "LD2410C Gate2 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate2 Still Threshold"
+    g3:
+      move_threshold:
+        name: "LD2410C Gate3 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate3 Still Threshold"
+    g4:
+      move_threshold:
+        name: "LD2410C Gate4 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate4 Still Threshold"
+    g5:
+      move_threshold:
+        name: "LD2410C Gate5 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate5 Still Threshold"
+    g6:
+      move_threshold:
+        name: "LD2410C Gate6 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate6 Still Threshold"
+    g7:
+      move_threshold:
+        name: "LD2410C Gate7 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate7 Still Threshold"
+    g8:
+      move_threshold:
+        name: "LD2410C Gate8 Move Threshold"
+      still_threshold:
+        name: "LD2410C Gate8 Still Threshold"
+
+select:
+
+  # Occupancy Detect Mode:
+  # This selector defines the detection mode for the integrated occupancy sensor. Depending on the
+  # selected option, only the given sensor(s) will be used to judge when occupancy begins (i.e.
+  # when the given sensor(s) detect, occupancy detects).
+  #  * PIR + Radar + Light:
+  #    All 3 sensors reporting detection simultaneously will begin occupancy
+  #  * PIR + Radar
+  #    Both PIR and Radar sensors reporting detection simultaneously will begin occupancy
+  #  * PIR + Light
+  #    Both PIR and Light sensors reporting detection simultaneously will begin occupancy
+  #  * Radar + Light
+  #    Both Radar and Light sensors reporting detection simultaneously will begin occupancy
+  #  * PIR Only
+  #    PIR sensor reporting detection will begin occupancy
+  #  * Radar Only
+  #    Radar sensor reporting detection will begin occupancy
+  #  * Light Only
+  #    Light sensor reporting detection will begin occupancy
+  #  * None
+  #    No sensors will begin occupancy and the integrated occupancy functionality is disabled
+  # Values are reported as integers using bitwise logic:
+  #  Bit 2: PIR
+  #  Bit 1: Radar
+  #  Bit 0: Light
+  - platform: template
+    name: "Occupancy Detect Mode"
+    id: occupancy_detect_mode_setter
+    options:
+      - "PIR + Radar + Light"   # 111 = 7
+      - "PIR + Radar"           # 110 = 6
+      - "PIR + Light"           # 101 = 5
+      - "Radar + Light"         # 011 = 3
+      - "PIR Only"              # 100 = 4
+      - "Radar Only"            # 010 = 2
+      - "Light Only"            # 001 = 1
+      - "None"                  # 000 = 0
+    initial_option: "None"
+    optimistic: yes
+    restore_value: yes
+    set_action:
+      - globals.set:
+          id: occupancy_detect_mode
+          value: !lambda |-
+            ESP_LOGD("occupancy_detect_mode_setter", x.c_str());
+            if (x == "PIR + Radar + Light") {
+              return 7;
+            } else if (x == "PIR + Radar") {
+              return 6;
+            } else if (x == "PIR + Light") {
+              return 5;
+            } else if (x == "Radar + Light") {
+              return 3;
+            } else if (x == "PIR Only") {
+              return 4;
+            } else if (x == "Radar Only") {
+              return 2;
+            } else if (x == "Light Only") {
+              return 1;
+            } else {
+              return 0;
+            }
+
+  # Occupancy Clear Mode:
+  # This selector defines the clear mode for the integrated occupancy sensor. Depending on the
+  # selected option, only the given sensor(s) will be used to judge when occupancy ends (i.e.
+  # when the given sensor(s) clear, occupancy clears).
+  #  * PIR + Radar + Light:
+  #    Any of the 3 sensors clearing will end occupancy
+  #  * PIR + Radar:
+  #    Either of the PIR or Radar sensors clearing will end occupancy
+  #  * PIR + Light:
+  #    Either of the PIR or Light sensors clearing will end occupancy
+  #  * Radar + Light:
+  #    Either of the Radar or Light sensors clearing will end occupancy
+  #  * PIR Only
+  #    PIR sensor clearing will end occupancy
+  #  * Radar Only
+  #    Radar sensor clearing will end occupancy
+  #  * Light Only
+  #    Light sensor clearing will end occupancy
+  #  * None
+  #    No sensors will end occupancy; state will persist indefinitely once triggered
+  # Values are reported as integers using bitwise logic:
+  #  Bit 0: PIR
+  #  Bit 1: Radar
+  #  Bit 2: Light
+  - platform: template
+    name: "Occupancy Clear Mode"
+    id: occupancy_clear_mode_setter
+    options:
+      - "PIR + Radar + Light"   # 111 = 7
+      - "PIR + Radar"           # 110 = 6
+      - "PIR + Light"           # 101 = 5
+      - "Radar + Light"         # 011 = 3
+      - "PIR Only"              # 100 = 4
+      - "Radar Only"            # 010 = 2
+      - "Light Only"            # 001 = 1
+      - "None"                  # 000 = 0
+    initial_option: "None"
+    optimistic: yes
+    restore_value: yes
+    set_action:
+      - globals.set:
+          id: occupancy_clear_mode
+          value: !lambda |-
+            ESP_LOGD("occupancy_detect_mode_setter", x.c_str());
+            if (x == "PIR + Radar + Light") {
+              return 7;
+            } else if (x == "PIR + Radar") {
+              return 6;
+            } else if (x == "PIR + Light") {
+              return 5;
+            } else if (x == "Radar + Light") {
+              return 3;
+            } else if (x == "PIR Only") {
+              return 4;
+            } else if (x == "Radar Only") {
+              return 2;
+            } else if (x == "Light Only") {
+              return 1;
+            } else {
+              return 0;
+            }
+
+  - platform: ld2410
+    distance_resolution:
+      name: "LD2410C Distance Resolution"
