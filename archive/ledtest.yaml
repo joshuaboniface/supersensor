@@ -1,0 +1,103 @@
+
+esphome:
+  name: supersensor
+  name_add_mac_suffix: true
+  friendly_name: "Supersensor"
+  project:
+    name: joshuaboniface.supersensor
+    version: "0.1"
+
+logger:
+  level: DEBUG
+  baud_rate: 115200
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+
+script:
+  - id: ledtest
+    then:
+      - light.turn_on:
+          id: output_led
+          effect: flash_white
+      - delay: 5s
+      - light.turn_off:
+          id: output_led
+      - delay: 5s
+      - light.turn_on:
+          id: output_led
+          red: 1
+          green: 0
+          blue: 0
+      - delay: 5s
+      - light.turn_on:
+          id: output_led
+          red: 0
+          green: 1
+          blue: 0
+      - delay: 5s
+      - light.turn_on:
+          id: output_led
+          red: 0
+          green: 0
+          blue: 1
+  
+interval:
+  - interval: 30s
+    then:
+      - script.stop: ledtest
+      - light.turn_off: output_led
+      - script.execute: ledtest
+
+light:
+  - platform: rgb
+    id: output_led
+    red: rgb_r
+    green: rgb_g
+    blue: rgb_b
+    default_transition_length: 0.15s
+    flash_transition_length: 0.15s
+    effects:
+      - strobe:
+          name: flash_white
+          colors:
+            - state: true
+              brightness: 50%
+              red: 40%
+              green: 50%
+              blue: 45%
+              duration: 0.5s
+            - state: false
+              duration: 0.5s
+      - automation:
+          name: hold
+          sequence:
+            - delay: 5s
+            - light.turn_off:
+                id: output_led
+                transition_length: 1s
+  
+output:
+  - platform: ledc
+    id: rgb_r
+    pin: GPIO32
+    max_power: 100%
+  - platform: ledc
+    id: rgb_g
+    pin: GPIO33
+    max_power: 100%
+  - platform: ledc
+    id: rgb_b
+    pin: GPIO25
+    max_power: 100%
