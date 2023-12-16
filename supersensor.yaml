@@ -195,20 +195,22 @@ script:
           }
 
 interval:
-  - interval: 1s
+  - interval: 5s
     then:
+      - logger.log: "Checking Voice Assistant is running"
       - if:
           condition:
-            api.connected:
+            and:
+              - api.connected:
+              - switch.is_on: use_wake_word
+              - not:
+                  - voice_assistant.is_running
           then:
-            - if:
-                condition:
-                  and:
-                    - switch.is_on: use_wake_word
-                    - not:
-                        - voice_assistant.is_running
-                then:
-                  - voice_assistant.start_continuous:
+            - logger.log: "Voice Assistant not running; restarting it"
+            - switch.turn_off: use_wake_word
+            - delay: 1s
+            - switch.turn_on: use_wake_word
+            - delay: 1s
 
 logger:
   level: DEBUG
@@ -645,12 +647,7 @@ switch:
     entity_category: config
     on_turn_on:
       - lambda: id(assist).set_use_wake_word(true);
-      - if:
-          condition:
-            not:
-              - voice_assistant.is_running
-          then:
-            - voice_assistant.start_continuous
+      - voice_assistant.start_continuous
     on_turn_off:
       - voice_assistant.stop
       - lambda: id(assist).set_use_wake_word(false);
