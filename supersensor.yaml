@@ -194,6 +194,22 @@ script:
             id(supersensor_occupancy).publish_state(false);
           }
 
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            api.connected:
+          then:
+            - if:
+                condition:
+                  and:
+                    - switch.is_on: use_wake_word
+                    - not:
+                        - voice_assistant.is_running
+                then:
+                  - voice_assistant.start_continuous:
+
 logger:
   level: DEBUG
   baud_rate: 115200
@@ -428,7 +444,6 @@ binary_sensor:
     has_target:
       name: "LD2410C Presence"
       id: radar_presence
-      icon: mdi:motion-sensor
       device_class: motion
       on_press:
         - script.execute: occupancy_detect_handler
