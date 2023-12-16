@@ -497,15 +497,20 @@ sensor:
     moving_distance:
       name: "LD2410C Moving Distance"
       id: moving_distance
+      icon: mdi:signal-distance-variant
     still_distance:
       name: "LD2410C Still Distance"
       id: still_distance
+      icon: mdi:signal-distance-variant
     moving_energy:
       name: "LD2410C Move Energy"
+      icon: mdi:flash
     still_energy:
       name: "LD2410C Still Energy"
+      icon: mdi:flash
     detection_distance:
       name: "LD2410C Presence Distance"
+      icon: mdi:signal-distance-variant
 
   - platform: uptime
     name: "ESP32 Uptime"
