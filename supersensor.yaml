@@ -428,6 +428,7 @@ binary_sensor:
     has_target:
       name: "LD2410C Presence"
       id: radar_presence
+      icon: mdi:motion-sensor
       device_class: motion
       on_press:
         - script.execute: occupancy_detect_handler
