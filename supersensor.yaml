@@ -202,7 +202,14 @@ api:
   encryption:
     key: !secret api_encryption_key
   on_client_connected:
+    - logger.log:
+        format: "Client %s connected to API with IP %s"
+        args: ["client_info.c_str()", "client_address.c_str()"]
     - switch.turn_on: use_wake_word
+  on_client_disconnected:
+    - logger.log:
+        format: "Client %s connected to API with IP %s"
+        args: ["client_info.c_str()", "client_address.c_str()"]
 
 ota:
   password: !secret ota_password
@@ -246,6 +253,22 @@ microphone:
     i2s_din_pin: GPIO14
     pdm: false
 
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition: voice_assistant.is_running
+          then:
+              - logger.log: "voice assistant state: running"
+          else:
+              - logger.log: "voice assistant state: not running"
+      - if:
+          condition: voice_assistant.connected
+          then:
+              - logger.log: "voice assistant state: connected"
+          else:
+              - logger.log: "voice assistant state: not connected"
+
 voice_assistant:
   microphone: mic
   use_wake_word: false
@@ -253,11 +276,25 @@ voice_assistant:
   auto_gain: 31dBFS
   volume_multiplier: 4.0
   id: assist
+  on_error:
+    - voice_assistant.stop:
+    - voice_assistant.start_continuous:
+  on_end:
+    - logger.log: "voice ended"
   on_client_connected:
-    - delay: 2s
+    - if:
+        condition:
+          switch.is_on: use_wake_word
+        then:
+          - voice_assistant.start_continuous:
     - light.turn_off:
         id: output_led
   on_client_disconnected:
+    - if:
+        condition:
+          switch.is_on: use_wake_word
+        then:
+          - voice_assistant.stop:
     - light.turn_on:
         id: output_led
         effect: flash_white
@@ -285,16 +322,8 @@ voice_assistant:
         transition_length: 1s
     - if:
         condition:
-          lambda: return x != "Sorry, I couldn't understand that";
+          lambda: return x == "Sorry, I couldn't understand that";
         then:
-          - logger.log: "Command successful!"
-          - light.turn_on:
-              id: output_led
-              effect: hold
-              red: 0
-              green: 1
-              blue: 0
-        else:
           - logger.log: "Command failed!"
           - light.turn_on:
               id: output_led
@@ -302,6 +331,14 @@ voice_assistant:
               red: 1
               green: 0
               blue: 0 
+        else:
+          - logger.log: "Command successful!"
+          - light.turn_on:
+              id: output_led
+              effect: hold
+              red: 0
+              green: 1
+              blue: 0
 
 light:
   - platform: rgb
@@ -616,14 +653,9 @@ switch:
     entity_category: config
     on_turn_on:
       - lambda: id(assist).set_use_wake_word(true);
-      - if:
-          condition:
-            not:
-              - voice_assistant.is_running
-          then:
-            - voice_assistant.start_continuous
+      - voice_assistant.start_continuous:
     on_turn_off:
-      - voice_assistant.stop
+      - voice_assistant.stop:
       - lambda: id(assist).set_use_wake_word(false);
 
   - platform: ld2410
