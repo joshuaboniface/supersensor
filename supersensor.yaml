@@ -37,6 +37,12 @@ esphome:
         - light.turn_on:
             id: output_led
             effect: flash_white
+    - priority: -600
+      then:
+        - wait_until:
+            api.connected:
+        - delay: 5s
+        - switch.turn_on: use_wake_word
 
 dashboard_import:
   package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
@@ -205,7 +211,6 @@ api:
     - logger.log:
         format: "Client %s connected to API with IP %s"
         args: ["client_info.c_str()", "client_address.c_str()"]
-    - switch.turn_on: use_wake_word
   on_client_disconnected:
     - logger.log:
         format: "Client %s connected to API with IP %s"
@@ -225,8 +230,7 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   domain: !secret wifi_domain
-  power_save_mode: LIGHT
-  reboot_timeout: 5min
+  reboot_timeout: 15min
 
 uart:
   id: ld2410_uart
@@ -254,37 +258,41 @@ microphone:
     pdm: false
 
 interval:
-  - interval: 1s
+  - interval: 5s
     then:
       - if:
-          condition: voice_assistant.is_running
+          condition:
+            and:
+              - switch.is_on: use_wake_word
+              - not: voice_assistant.is_running
           then:
-              - logger.log: "voice assistant state: running"
-          else:
-              - logger.log: "voice assistant state: not running"
-      - if:
-          condition: voice_assistant.connected
-          then:
-              - logger.log: "voice assistant state: connected"
-          else:
-              - logger.log: "voice assistant state: not connected"
+            - logger.log: "voice assistant state: not running"
+            - voice_assistant.start_continuous:
 
 voice_assistant:
   microphone: mic
   use_wake_word: false
-  noise_suppression_level: 2
+  noise_suppression_level: 1
   auto_gain: 31dBFS
-  volume_multiplier: 4.0
+  volume_multiplier: 7.0
   id: assist
   on_error:
-    - voice_assistant.stop:
-    - voice_assistant.start_continuous:
+    - logger.log: "voice error"
+    - if:
+        condition:
+          switch.is_on: use_wake_word
+        then:
+          - voice_assistant.stop:
+          - delay: 1s
+          - voice_assistant.start_continuous:
   on_end:
     - logger.log: "voice ended"
   on_client_connected:
     - if:
         condition:
-          switch.is_on: use_wake_word
+          and:
+            - switch.is_on: use_wake_word
+            - not: voice_assistant.is_running
         then:
           - voice_assistant.start_continuous:
     - light.turn_off:
