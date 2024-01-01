@@ -607,28 +607,28 @@ text_sensor:
     lambda: |-
       int iaq = int(id(bme680_iaq).state);
       if (iaq <= 50) {
-        return {"Excellent (" + to_string(iaq) + ")"};
+        return {"Excellent"};
       }
       else if (iaq <= 100) {
-        return {"Good (" + to_string(iaq) + ")"};
+        return {"Good"};
       }
       else if (iaq <= 150) {
-        return {"Fair (" + to_string(iaq) + ")"};
+        return {"Fair"};
       }
       else if (iaq <= 200) {
-        return {"Moderate (" + to_string(iaq) + ")"};
+        return {"Moderate"};
       }
       else if (iaq <= 250) {
-        return {"Bad (" + to_string(iaq) + ")"};
+        return {"Bad"};
       }
       else if (iaq <= 350) {
-        return {"Very Bad (" + to_string(iaq) + ")"};
+        return {"Very Bad"};
       }
-      else if (iaq <= 500) {
-        return {"Terrible (" + to_string(iaq) + ")"};
+      else if (iaq <= 600) {
+        return {"Terrible"};
       }
       else {
-        return {"Unknown (" + to_string(iaq) + ")"};
+        return {"Unknown"};
       }
 
   - platform: wifi_info
