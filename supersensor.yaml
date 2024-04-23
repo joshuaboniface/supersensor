@@ -19,6 +19,22 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 ###############################################################################
+#
+# LICENSE NOTICE:
+#
+#    This project uses the BME680 BSEC library.
+#
+#    The BSEC library is only available for use after accepting its software
+#    license agreement. By enabling this component, you are explicitly agreeing
+#    to the terms of the BSEC license agreement. You must not distribute any
+#    compiled firmware binaries that include this component.
+#
+#    You may choose to replace `bme680_bsec` in this config with the free
+#    version of the library should you so choose, but you will lose some
+#    of the functionality. If you do not use a BME680 sensor, you can ignore
+#    this and diable the BME680 components.
+#
+###############################################################################
 
 esphome:
   name: supersensor
