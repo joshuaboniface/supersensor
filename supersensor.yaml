@@ -205,6 +205,9 @@ script:
             id(supersensor_occupancy).publish_state(false);
           }
 
+preferences:
+  flash_write_interval: 5min
+
 logger:
   level: INFO
   baud_rate: 115200
@@ -217,6 +220,9 @@ web_server:
   port: 80
 
 captive_portal:
+
+mdns:
+  disabled: false
 
 wifi:
   ap: {}
