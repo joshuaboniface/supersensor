@@ -1,7 +1,7 @@
 # SuperSensor
 
 SuperSensor is an all-in-one voice, motion, presence, temperature/humidity/
-pressure, light, and BLE sensor, built on an ESP32 with ESPHome, and inspired
+pressure, and light sensor, built on an ESP32 with ESPHome, and inspired
 heavily by the EverythingSmartHome Everything Presence One sensor and the
 HomeAssistant "$13 Voice Assistant" project.
 
@@ -9,10 +9,11 @@ Use SuperSensors around your house to provide HomeAssistant Voice Assist
 interfaces with wake word detection, as well as other sensor detection options
 as you want them.
 
-Assist feedback is provided by a single common-cathode RGB LED. No speakers
-or annoying TTS feedback here! With the optional 3D Printed case and a clear
-diffuser cover, this LED can be turned into a sleek light bar on the bottom
-of the unit for quick and easy confirmation of voice actions.
+Assist feedback is provided by a pair of common-cathode RGB LED. No speakers
+or annoying TTS feedback here! With an optional 3D Printed case and a clear
+diffuser cover, the LEDs can be turned into a sleek light bar on the bottom
+of the unit for quick and easy confirmation of voice actions, or just use
+it bare if you like the "PCB on a wall" aesthetic.
 
 To Use:
 
@@ -33,15 +34,15 @@ Note: Once programmed, the output LED will flash continuously until connected
 
 ## Parts List
 
-* 1x ESP32 devkit (V4 38-pin, slim)
-* 2x Common-cathod RGB LED
-* 1x Resistor for the common-cathod RGB LED @ 3.3v input (~33-1000Ω, depending on desired brightness and LED)
-* 1x INMP441 MEMS microphone
-* 1x BME680 temperature/humidity/pressure/gase sensor (3.3v models); BME280 or BMP280 can be subsistuted but with reduced fuctionality (comment/uncomment the appropriate blocks as needed)
-* 1x TSL2591 light sensor
-* 1x HLK-LD2410C mmWave radar sensor
-* 1x SR602 PIR sensor
-* 1x SuperSensor PCB board (see "board/supersensor.dxf" or "board/supersensor.easyeda.json"
+* 1x ESP32 devkit (V4 38-pin, slim) [AliExpress (HW-395)](https://www.aliexpress.com/item/1005006019875837.html)
+* 1x INMP441 MEMS microphone [Amazon search](https://www.amazon.ca/s?k=INMP441)
+* 1x BME680 temperature/humidity/pressure/gase sensor (3.3v models); BME280 or BMP280 can be subsistuted but with reduced fuctionality (comment/uncomment the appropriate blocks as needed) [AliExpress](https://www.aliexpress.com/item/4000818429803.html)
+* 1x TSL2591 light sensor [AliExpress](https://www.aliexpress.com/item/1005005514391429.html)
+* 1x HLK-LD2410C-P mmWave radar sensor [AliExpress (LD2410C-P)](https://www.aliexpress.com/item/1005006000579211.html)
+* 1x SR602 PIR sensor [AliExpress](https://www.aliexpress.com/item/1005001572550300.html)
+* 2x Common-cathod RGB LEDs [Amazon search](https://www.amazon.ca/s?k=5mm+RGB+LED+common+cathode)
+* 1x Resistor for the common-cathod RGB LED @ 3.3v input (~33-1000Ω, depending on desired brightness and LEDs)
+* 1x SuperSensor PCB board (see "board/supersensor.dxf" or "board/supersensor.easyeda.json")
 * 1x 3D Printed case [Optional] 
 * 1x 3D Printed diffuser cover [Optional] 
 
