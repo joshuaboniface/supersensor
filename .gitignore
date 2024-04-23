@@ -3,3 +3,4 @@ secrets.yaml
 update-all.sh
 activate
 venv
+custom-supersensor.yaml
