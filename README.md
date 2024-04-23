@@ -16,39 +16,45 @@ of the unit for quick and easy confirmation of voice actions.
 
 To Use:
 
-  * Fill out a "secrets.yaml" for your environment.
   * Install this ESPHome configuration to a compatible ESP32 devkit (below).
   * Install the ESP32 and sensors into the custom PCB.
-  * [Optional] 3D Print our custom case.
+  * [Optional] 3D Print a custom case (I haven't designed one yet, but contributions welcome).
+  * Power up the SuperSensor, connect to the WiFi AP, and connect it to your network.
   * Install the SuperSensor somewhere that makes sense.
-  * Add the SuperSensor to HomeAssistant using the automatic name.
+  * Add/adopt the SuperSensor to HomeAssistant using the automatic name.
   * Tune the SuperSensor values to your needs.
 
 Note: Once programmed, the output LED will flash continuously until connected
       to HomeAssistant, and a bit longer to establish if the wake word
       functionality is enabled. This is by design, so you know if your sensors
       are connected or not. If you do not want this, comment out the
-      `light.turn_on` block starting on line 29 of the ESPHome configuration
+      `light.turn_on` block starting on line 54 of the ESPHome configuration
       to disable this functionality.
 
 ## Parts List
 
 * 1x ESP32 devkit (V4 38-pin, slim)
 * 2x Common-cathod RGB LED
-* 2x Resistor for the common-cathod RGB LED @ 3.3v input (~33-1000Ω, depending on desired brightness and LED)
+* 1x Resistor for the common-cathod RGB LED @ 3.3v input (~33-1000Ω, depending on desired brightness and LED)
 * 1x INMP441 MEMS microphone
 * 1x BME680 temperature/humidity/pressure/gase sensor (3.3v models); BME280 or BMP280 can be subsistuted but with reduced fuctionality (comment/uncomment the appropriate blocks as needed)
 * 1x TSL2591 light sensor
 * 1x HLK-LD2410C mmWave radar sensor
 * 1x SR602 PIR sensor
-* 1x SuperSensor PCB board
-* [Optional] 1x 3D Printed case
-* [Optional] 1x 3D Printed diffuser cover
+* 1x SuperSensor PCB board (see "board/supersensor.dxf" or "board/supersensor.easyeda.json"
+* 1x 3D Printed case [Optional] 
+* 1x 3D Printed diffuser cover [Optional] 
 
 ## Configurable Options
 
 There are several UI-configurable options with the SuperSensor to help you
 get the most out of the sensor for your particular usecase.
+
+### Voice Control
+
+The SuperSensor's voice functionality can be completely disabled if voice
+support is not desired. This defeats most of the point of the SuperSensor,
+but can be done if desired.
 
 ### Light Threshold Control
 
