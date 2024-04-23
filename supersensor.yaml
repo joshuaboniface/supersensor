@@ -26,7 +26,7 @@ esphome:
   friendly_name: "Supersensor"
   project:
     name: joshuaboniface.supersensor
-    version: "0.1"
+    version: "1.0"
   on_boot:
     - priority: 600
       then:
@@ -34,6 +34,7 @@ esphome:
             id(supersensor_occupancy).publish_state(false);
             id(pir_presence).publish_state(false);
             id(light_presence).publish_state(false);
+            id(radar_presence).publish_state(false);
         - light.turn_on:
             id: output_led
             effect: flash_white
@@ -42,11 +43,15 @@ esphome:
         - wait_until:
             api.connected:
         - delay: 5s
-        - switch.turn_on: use_wake_word
+        - if:
+            condition:
+              and:
+                - switch.is_on: enable_voice_support
+            then:
+              - switch.turn_on: voice_support_active
 
 dashboard_import:
   package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
-  import_full_config: false
 
 esp32:
   board: esp32dev
@@ -201,35 +206,20 @@ script:
           }
 
 logger:
-  level: DEBUG
+  level: INFO
   baud_rate: 115200
 
 api:
-  encryption:
-    key: !secret api_encryption_key
-  on_client_connected:
-    - logger.log:
-        format: "Client %s connected to API with IP %s"
-        args: ["client_info.c_str()", "client_address.c_str()"]
-  on_client_disconnected:
-    - logger.log:
-        format: "Client %s connected to API with IP %s"
-        args: ["client_info.c_str()", "client_address.c_str()"]
 
 ota:
-  password: !secret ota_password
-  safe_mode: false
 
 web_server:
   port: 80
-  auth:
-    username: !secret web_auth_username
-    password: !secret web_auth_password
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  domain: !secret wifi_domain
+  ap: {}
+  domain: ""
+  fast_connect: false
   reboot_timeout: 15min
 
 uart:
@@ -263,7 +253,7 @@ interval:
       - if:
           condition:
             and:
-              - switch.is_on: use_wake_word
+              - switch.is_on: voice_support_active
               - not: voice_assistant.is_running
           then:
             - logger.log: "voice assistant not running; restarting"
@@ -280,7 +270,7 @@ voice_assistant:
     - logger.log: "voice error"
     - if:
         condition:
-          switch.is_on: use_wake_word
+          switch.is_on: voice_support_active
         then:
           - voice_assistant.stop:
           - delay: 1s
@@ -291,7 +281,7 @@ voice_assistant:
     - if:
         condition:
           and:
-            - switch.is_on: use_wake_word
+            - switch.is_on: voice_support_active
             - not: voice_assistant.is_running
         then:
           - voice_assistant.start_continuous:
@@ -300,7 +290,7 @@ voice_assistant:
   on_client_disconnected:
     - if:
         condition:
-          switch.is_on: use_wake_word
+          switch.is_on: voice_support_active
         then:
           - voice_assistant.stop:
     - light.turn_on:
@@ -663,10 +653,23 @@ button:
     entity_category: diagnostic
 
 switch:
+  # Global enable/disable for voice support
   - platform: template
-    name: "Enable Wake Word"
+    name: "Enable Voice Support"
     icon: mdi:account-voice
-    id: use_wake_word
+    id: enable_voice_support
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    on_turn_on:
+      - switch.turn_on: voice_support_active
+    on_turn_off:
+      - switch.turn_off: voice_support_active
+  # Active voice support flag/switch
+  - platform: template
+    name: "Voice Support Active"
+    icon: mdi:account-voice
+    id: voice_support_active
     optimistic: true
     restore_mode: ALWAYS_OFF
     entity_category: config
