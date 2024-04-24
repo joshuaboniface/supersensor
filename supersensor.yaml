@@ -684,7 +684,6 @@ switch:
     id: enable_voice_support
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
-    entity_category: config
     on_turn_on:
       - switch.turn_on: voice_support_active
     on_turn_off:
