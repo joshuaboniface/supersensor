@@ -32,6 +32,8 @@ Note: Once programmed, the output LED will flash continuously until connected
       `light.turn_on` block starting on line 54 of the ESPHome configuration
       to disable this functionality.
 
+For more details, please [see my blog post on the SuperSensor project](https://www.boniface.me/the-supersensor/).
+
 ## Parts List
 
 * 1x ESP32 devkit (V4 38-pin, slim) [AliExpress (HW-395)](https://www.aliexpress.com/item/1005006019875837.html)
