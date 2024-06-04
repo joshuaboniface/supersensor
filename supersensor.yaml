@@ -638,11 +638,8 @@ text_sensor:
       else if (iaq <= 350) {
         return {"Very Bad"};
       }
-      else if (iaq <= 600) {
-        return {"Terrible"};
-      }
       else {
-        return {"Unknown"};
+        return {"Terrible"};
       }
 
   - platform: wifi_info
