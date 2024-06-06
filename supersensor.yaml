@@ -680,11 +680,17 @@ button:
       entity_category: diagnostic
     factory_reset:
       name: "LD2410C Factory Reset"
+      icon: mdi:restart-alert
       entity_category: diagnostic
 
   - platform: restart
     name: "ESP32 Restart"
     icon: mdi:power-cycle
+    entity_category: diagnostic
+
+  - platform: factory_reset
+    name: "ESP32 Factory Reset"
+    icon: mdi:restart-alert
     entity_category: diagnostic
 
 switch:
