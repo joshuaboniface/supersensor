@@ -501,23 +501,37 @@ sensor:
     temperature:
       name: "BME680 Temperature"
       id: bme680_temperature
+      filters:
+        - median
     pressure:
       name: "BME680 Pressure"
       id: bme680_pressure
+      filters:
+        - median
     humidity:
       name: "BME680 Relative Humidity"
       id: bme680_humidity
+      filters:
+        - median
     iaq:
       name: "BME680 IAQ"
       id: bme680_iaq
+      filters:
+        - median
     co2_equivalent:
       name: "BME680 CO2 Equivalent"
+      filters:
+        - median
     breath_voc_equivalent:
       name: "BME680 Breath VOC Equivalent"
+      filters:
+        - median
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
       internal: yes
+      filters:
+        - median
 
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
