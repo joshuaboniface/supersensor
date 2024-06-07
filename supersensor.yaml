@@ -416,7 +416,6 @@ bme680_bsec:
   address: 0x77
   id: bme680_sensor
   sample_rate: lp
-  state_save_interval: 1h
   iaq_mode: static
 
 ld2410:
