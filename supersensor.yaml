@@ -417,7 +417,7 @@ bme680_bsec:
   id: bme680_sensor
   sample_rate: lp
   iaq_mode: static
-  state_save_interval: 30m
+  state_save_interval: 30min
 
 ld2410:
   id: ld2410_radar
