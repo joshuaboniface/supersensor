@@ -244,7 +244,8 @@ wifi:
   ap: {}
   domain: ""
   fast_connect: false
-  reboot_timeout: 15min
+  output_power: 8.5dB
+  reboot_timeout: 5min
 
 uart:
   id: ld2410_uart
