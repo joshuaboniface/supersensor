@@ -57,6 +57,11 @@ esp32:
   board: esp32dev
 
 globals:
+  - id: gas_ceiling
+    type: int
+    restore_value: yes
+    initial_value: "200000"
+
   - id: pir_hold_time
     type: int
     restore_value: yes
@@ -499,18 +504,26 @@ sensor:
       filters:
         - median
 
-  - platform: template
-    name: "BME680 IAQ"
-    id: bme680_iaq
-    icon: "mdi:gauge"
-    # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
-    lambda: |-
-      return log(id(bme680_gas_resistance).state) + 0.04 * id(bme680_humidity).state;
-
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
     temperature: bme680_temperature
     humidity: bme680_humidity
+    id: bme680_absolute_humidity
+
+  - platform: template
+    name: "BME680 AQ"
+    id: bme680_aq
+    icon: "mdi:gauge"
+    # Calculation from https://github.com/thstielow/raspi-bme680-iaq
+    lambda: |-
+      float ph_slope = 0.03;
+      float comp_gas = id(bme680_gas_resistance).state * pow(2.718281, (ph_slope * id(bme680_absolute_humidity).state));
+      float gas_ratio = pow((comp_gas / id(gas_ceiling)), 2);
+      if (gas_ratio > 1) {
+          gas_ratio = 1.0;
+      }
+      float air_quality = gas_ratio * 100;
+      return (int)air_quality;
 
   - platform: tsl2591
     address: 0x29
@@ -598,28 +611,25 @@ sensor:
 
 text_sensor:
   - platform: template
-    name: "BME680 IAQ Classification"
+    name: "BME680 AQ Classification"
     icon: "mdi:air-filter"
     update_interval: 15s
     lambda: |-
-      int iaq = int(id(bme680_iaq).state);
-      if (iaq <= 50) {
+      int aq = int(id(bme680_aq).state);
+      if (aq >= 90) {
         return {"Excellent"};
       }
-      else if (iaq <= 100) {
+      else if (aq >= 80) {
         return {"Good"};
       }
-      else if (iaq <= 150) {
+      else if (aq >= 70) {
         return {"Fair"};
       }
-      else if (iaq <= 200) {
+      else if (aq >= 60) {
         return {"Moderate"};
       }
-      else if (iaq <= 250) {
+      else if (aq >= 50) {
         return {"Bad"};
-      }
-      else if (iaq <= 350) {
-        return {"Very Bad"};
       }
       else {
         return {"Terrible"};
@@ -698,6 +708,20 @@ switch:
       entity_category: diagnostic
 
 number:
+  - platform: template
+    name: "Gas Ceiling"
+    id: gas_ceiling_setter
+    min_value: 25000
+    max_value: 350000
+    step: 1000
+    lambda: |-
+      return id(gas_ceiling);
+    set_action:
+      then:
+        - globals.set:
+            id: gas_ceiling
+            value: !lambda 'return int(x);'
+
   # PIR Hold Time:
   # The number of seconds after motion detection for the PIR sensor to remain held on
   - platform: template

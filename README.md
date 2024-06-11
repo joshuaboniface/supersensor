@@ -29,7 +29,7 @@ Note: Once programmed, the output LED will flash continuously until connected
       to HomeAssistant, and a bit longer to establish if the wake word
       functionality is enabled. This is by design, so you know if your sensors
       are connected or not. If you do not want this, comment out the
-      `light.turn_on` block starting on line 54 of the ESPHome configuration
+      `light.turn_on` block starting on line 38 of the ESPHome configuration
       to disable this functionality.
 
 For more details, please [see my blog post on the SuperSensor project](https://www.boniface.me/the-supersensor/).
@@ -58,6 +58,21 @@ get the most out of the sensor for your particular usecase.
 The SuperSensor's voice functionality can be completely disabled if voice
 support is not desired. This defeats most of the point of the SuperSensor,
 but can be done if desired.
+
+### Gas Ceiling
+
+The AQ (air quality) calculation from the BME680 requires a "maximum"/ceiling
+threshold for the gas resistance value in clean air after some operation
+time. The value defaults to 200,000 to provide an initial baseline, but
+should be calibrated manually by:
+
+1. Turning on the Supersensor in a known-clean environment (e.g. a sealed
+   container in fresh air).
+2. Leave the sensor on for 4-6 hours to burn in the sensor.
+3. Setting this to the maximum value of the Gas Resistance sensor.
+
+This value will then define what "100% air quality" represents, and the
+Supersensor can then be moved to its normal operating location.
 
 ### Light Threshold Control
 
