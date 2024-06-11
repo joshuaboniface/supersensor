@@ -549,7 +549,7 @@ sensor:
     calculated_lux:
       id: tsl2591_lux
       name: "TSL2591 Illumination"
-      unit_of_measurement: Lux
+      unit_of_measurement: lx
       on_value:
         - script.execute: light_handler
     actual_gain:
