@@ -515,6 +515,7 @@ sensor:
     id: bme680_aq
     icon: "mdi:gauge"
     unit_of_measurement: "%"
+    accuracy_decimals: 0
     # Calculation from https://github.com/thstielow/raspi-bme680-iaq
     lambda: |-
       float ph_slope = 0.03;
