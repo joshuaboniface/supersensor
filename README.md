@@ -69,8 +69,9 @@ should be calibrated manually after setup as each sensor is different:
 1. Turn on the Supersensor in a known-clean environment (e.g. a sealed clean
    container in fresh air).
 2. Leave the sensor on for 4-6 hours to burn in.
-3. Record the maximum Gas Resistance value (in Ω) and round up to the nearest
-   5,000-10,000 or so (e.g. 96,938 => 100,000).
+3. Look at the historical graphs for the Gas Resistance sensor and find the
+   maximum value over the burn-in period.
+4. Round the maximum Gas Resistance value **up** to the nearest 1000.
 4. Divide the rounded maximum Gas Resistance value by 1000 to get the kΩ value.
 
 This value will then define what "100% air quality" represents, and the
