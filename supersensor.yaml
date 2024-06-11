@@ -57,7 +57,7 @@ esp32:
   board: esp32dev
 
 globals:
-  - id: gas_ceiling
+  - id: gas_resistance_ceiling
     type: int
     restore_value: yes
     initial_value: "200"
@@ -521,7 +521,7 @@ sensor:
     lambda: |-
       float ph_slope = 0.03;
       float comp_gas = id(bme680_gas_resistance).state * pow(2.718281, (ph_slope * id(bme680_absolute_humidity).state));
-      float gas_ratio = pow((comp_gas / (id(gas_ceiling) * 1000)), 2);
+      float gas_ratio = pow((comp_gas / (id(gas_resistance_ceiling) * 1000)), 2);
       if (gas_ratio > 1) {
           gas_ratio = 1.0;
       }
@@ -716,18 +716,18 @@ switch:
 
 number:
   - platform: template
-    name: "Gas Ceiling (kΩ)"
-    id: gas_ceiling_setter
+    name: "Gas Resistance Ceiling (kΩ)"
+    id: gas_resistance_ceiling_setter
     min_value: 10
     max_value: 500
     step: 1
     entity_category: config
     lambda: |-
-      return id(gas_ceiling);
+      return id(gas_resistance_ceiling);
     set_action:
       then:
         - globals.set:
-            id: gas_ceiling
+            id: gas_resistance_ceiling
             value: !lambda 'return int(x);'
 
   # PIR Hold Time:
