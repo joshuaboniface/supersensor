@@ -524,7 +524,11 @@ sensor:
           gas_ratio = 1.0;
       }
       float air_quality = gas_ratio * 100;
-      return (int)air_quality;
+      int normalized_air_quality = (int)air_quality;
+      if (normalized_air_quality > 100) {
+          normalized_air_quality = 100;
+      }
+      return normalized_air_quality;
 
   - platform: tsl2591
     address: 0x29
