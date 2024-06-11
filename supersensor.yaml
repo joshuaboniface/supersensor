@@ -715,6 +715,7 @@ number:
     min_value: 25
     max_value: 350
     step: 1
+    entity_category: config
     lambda: |-
       return id(gas_ceiling);
     set_action:
