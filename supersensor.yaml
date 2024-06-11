@@ -516,6 +516,7 @@ sensor:
     icon: "mdi:gauge"
     unit_of_measurement: "%"
     accuracy_decimals: 0
+    update_interval: 5s
     # Calculation from https://github.com/thstielow/raspi-bme680-iaq
     lambda: |-
       float ph_slope = 0.03;
@@ -619,7 +620,7 @@ text_sensor:
   - platform: template
     name: "BME680 AQ Classification"
     icon: "mdi:air-filter"
-    update_interval: 15s
+    update_interval: 5s
     lambda: |-
       int aq = int(id(bme680_aq).state);
       if (aq >= 90) {
