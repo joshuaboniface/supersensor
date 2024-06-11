@@ -19,22 +19,6 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 ###############################################################################
-#
-# LICENSE NOTICE:
-#
-#    This project uses the BME680 BSEC library.
-#
-#    The BSEC library is only available for use after accepting its software
-#    license agreement. By enabling this component, you are explicitly agreeing
-#    to the terms of the BSEC license agreement. You must not distribute any
-#    compiled firmware binaries that include this component.
-#
-#    You may choose to replace `bme680_bsec` in this config with the free
-#    version of the library should you so choose, but you will lose some
-#    of the functionality. If you do not use a BME680 sensor, you can ignore
-#    this and diable the BME680 components.
-#
-###############################################################################
 
 esphome:
   name: supersensor
@@ -413,13 +397,6 @@ output:
     id: rgb_b
     pin: GPIO25
 
-bme680_bsec:
-  address: 0x77
-  id: bme680_sensor
-  sample_rate: lp
-  iaq_mode: static
-  state_save_interval: 30min
-
 ld2410:
   id: ld2410_radar
   uart_id: ld2410_uart
@@ -497,11 +474,13 @@ binary_sensor:
       name: "LD2410C Still Target"
 
 sensor:
-  - platform: bme680_bsec
-    bme680_bsec_id: bme680_sensor
+  - platform: bme680
+    address: 0x77
+    update_interval: 5s
     temperature:
       name: "BME680 Temperature"
       id: bme680_temperature
+      oversampling: 16x
       filters:
         - median
     pressure:
@@ -514,25 +493,19 @@ sensor:
       id: bme680_humidity
       filters:
         - median
-    iaq:
-      name: "BME680 IAQ"
-      id: bme680_iaq
-      filters:
-        - median
-    co2_equivalent:
-      name: "BME680 CO2 Equivalent"
-      filters:
-        - median
-    breath_voc_equivalent:
-      name: "BME680 Breath VOC Equivalent"
-      filters:
-        - median
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
-      internal: yes
       filters:
         - median
+
+  - platform: template
+    name: "BME680 IAQ"
+    id: bme680_iaq
+    icon: "mdi:gauge"
+    # caulculation: comp_gas = log(R_gas[ohm]) + 0.04 log(Ohm)/%rh * hum[%rh]
+    lambda: |-
+      return log(id(bme680_gas_resistance).state) + 0.04 * id(bme680_humidity).state;
 
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
@@ -624,11 +597,6 @@ sensor:
     entity_category: diagnostic
 
 text_sensor:
-  - platform: bme680_bsec
-    bme680_bsec_id: bme680_sensor
-    iaq_accuracy:
-      name: "BME680 IAQ Accuracy"
-
   - platform: template
     name: "BME680 IAQ Classification"
     icon: "mdi:air-filter"
