@@ -60,7 +60,7 @@ globals:
   - id: gas_ceiling
     type: int
     restore_value: yes
-    initial_value: "200000"
+    initial_value: "200"
 
   - id: pir_hold_time
     type: int
@@ -518,7 +518,7 @@ sensor:
     lambda: |-
       float ph_slope = 0.03;
       float comp_gas = id(bme680_gas_resistance).state * pow(2.718281, (ph_slope * id(bme680_absolute_humidity).state));
-      float gas_ratio = pow((comp_gas / id(gas_ceiling)), 2);
+      float gas_ratio = pow((comp_gas / (id(gas_ceiling) * 1000)), 2);
       if (gas_ratio > 1) {
           gas_ratio = 1.0;
       }
@@ -709,11 +709,11 @@ switch:
 
 number:
   - platform: template
-    name: "Gas Ceiling"
+    name: "Gas Ceiling (kΩ)"
     id: gas_ceiling_setter
-    min_value: 25000
-    max_value: 350000
-    step: 1000
+    min_value: 25
+    max_value: 350
+    step: 1
     lambda: |-
       return id(gas_ceiling);
     set_action:

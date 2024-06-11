@@ -63,13 +63,15 @@ but can be done if desired.
 
 The AQ (air quality) calculation from the BME680 requires a "maximum"/ceiling
 threshold for the gas resistance value in clean air after some operation
-time. The value defaults to 200,000 to provide an initial baseline, but
-should be calibrated manually by:
+time. The value defaults to 200 kΩ to provide an initial baseline, but
+should be calibrated manually after setup as each sensor is different:
 
-1. Turning on the Supersensor in a known-clean environment (e.g. a sealed
+1. Turn on the Supersensor in a known-clean environment (e.g. a sealed clean
    container in fresh air).
-2. Leave the sensor on for 4-6 hours to burn in the sensor.
-3. Setting this to the maximum value of the Gas Resistance sensor.
+2. Leave the sensor on for 4-6 hours to burn in.
+3. Record the maximum Gas Resistance value (in Ω) and round up to the nearest
+   5,000-10,000 or so (e.g. 96,938 => 100,000).
+4. Divide the rounded maximum Gas Resistance value by 1000 to get the kΩ value.
 
 This value will then define what "100% air quality" represents, and the
 Supersensor can then be moved to its normal operating location.
