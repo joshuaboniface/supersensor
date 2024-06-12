@@ -26,7 +26,7 @@ esphome:
   friendly_name: "Supersensor"
   project:
     name: joshuaboniface.supersensor
-    version: "1.0"
+    version: "1.1"
   on_boot:
     - priority: 600
       then:
