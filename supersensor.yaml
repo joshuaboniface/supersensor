@@ -482,7 +482,7 @@ sensor:
   - platform: bme680
     address: 0x77
     update_interval: 5s
-    iir_filter: 15x
+    iir_filter: 127x
     temperature:
       name: "BME680 Temperature"
       id: bme680_temperature
