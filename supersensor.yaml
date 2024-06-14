@@ -498,7 +498,6 @@ sensor:
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
-      oversampling: 16x
 
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
