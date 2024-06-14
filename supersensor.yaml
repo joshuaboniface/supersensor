@@ -482,27 +482,23 @@ sensor:
   - platform: bme680
     address: 0x77
     update_interval: 5s
+    iir_filter: 15x
     temperature:
       name: "BME680 Temperature"
       id: bme680_temperature
       oversampling: 16x
-      filters:
-        - median
     pressure:
       name: "BME680 Pressure"
       id: bme680_pressure
-      filters:
-        - median
+      oversampling: 16x
     humidity:
       name: "BME680 Relative Humidity"
       id: bme680_humidity
-      filters:
-        - median
+      oversampling: 16x
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
-      filters:
-        - median
+      oversampling: 16x
 
   - platform: absolute_humidity
     name: "BME680 Absolute Humidity"
