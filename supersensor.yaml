@@ -55,6 +55,17 @@ dashboard_import:
 
 esp32:
   board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
 
 globals:
   - id: gas_resistance_ceiling
@@ -273,6 +284,13 @@ interval:
           then:
             - logger.log: "voice assistant not running; restarting"
             - voice_assistant.start_continuous:
+
+#micro_wake_word:
+#  model: hey_jarvis
+#  on_wake_word_detected:
+#    then:
+#      - voice_assistant.start:
+#          wake_word: !lambda return wake_word;
 
 voice_assistant:
   microphone: mic
