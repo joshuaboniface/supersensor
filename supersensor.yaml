@@ -285,6 +285,8 @@ interval:
             - logger.log: "voice assistant not running; restarting"
             - voice_assistant.start_continuous:
 
+# Add optional microWakeWord support (on-device wake word)
+# Doesn't work well as of 2024-07-04 so leave disabled
 #micro_wake_word:
 #  model: hey_jarvis
 #  on_wake_word_detected:
@@ -292,12 +294,21 @@ interval:
 #      - voice_assistant.start:
 #          wake_word: !lambda return wake_word;
 
+# Include the Espressif Audio Development Framework for VAD support
+esp_adf:
+external_components:
+  - source: github://pr#5230
+    components:
+      - esp_adf
+    refresh: 0s
+
 voice_assistant:
   microphone: mic
   use_wake_word: false
   noise_suppression_level: 4
   auto_gain: 31dBFS
   volume_multiplier: 8.0
+  vad_threshold: 3
   id: assist
   on_error:
     - logger.log: "voice error"
