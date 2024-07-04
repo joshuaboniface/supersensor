@@ -277,9 +277,9 @@ interval:
 voice_assistant:
   microphone: mic
   use_wake_word: false
-  noise_suppression_level: 2
+  noise_suppression_level: 4
   auto_gain: 31dBFS
-  volume_multiplier: 3.0
+  volume_multiplier: 8.0
   id: assist
   on_error:
     - logger.log: "voice error"
