@@ -225,7 +225,7 @@ preferences:
   flash_write_interval: 15sec
 
 logger:
-  level: INFO
+  level: DEBUG
   baud_rate: 115200
 
 api:
