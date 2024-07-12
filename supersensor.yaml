@@ -279,7 +279,7 @@ interval:
       - if:
           condition:
             and:
-              - switch.is_on: enable_voice_support
+              - switch.is_on: voice_support_active
               - not: voice_assistant.connected
           then:
             - logger.log: "voice assistant not running; restarting"
@@ -313,14 +313,28 @@ voice_assistant:
   id: assist
   on_error:
     - logger.log: "voice error"
-    - voice_assistant.stop:
-    - voice_assistant.start_continuous:
+    - if:
+        condition:
+          switch.is_on: voice_support_active
+        then:
+          - voice_assistant.stop:
+          - voice_assistant.start_continuous:
   on_end:
     - logger.log: "voice ended"
   on_client_connected:
+    - if:
+        condition:
+          switch.is_on: voice_support_active
+        then:
+          - voice_assistant.start_continuous:
     - light.turn_off:
         id: output_led
   on_client_disconnected:
+    - if:
+        condition:
+          switch.is_on: voice_support_active
+        then:
+          - voice_assistant.stop:
     - light.turn_on:
         id: output_led
         effect: flash_white
