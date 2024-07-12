@@ -283,6 +283,7 @@ interval:
               - not: voice_assistant.connected
           then:
             - logger.log: "voice assistant not running; restarting"
+            - voice_assistant.stop:
             - voice_assistant.start_continuous:
 
 # Add optional microWakeWord support (on-device wake word)
