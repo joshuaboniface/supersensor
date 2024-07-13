@@ -280,7 +280,7 @@ interval:
           condition:
             and:
               - switch.is_on: voice_support_active
-              - not: voice_assistant.is_active
+              - not: voice_assistant.is_running
           then:
             - logger.log: "voice assistant not running; restarting"
             - voice_assistant.start_continuous:
@@ -316,7 +316,7 @@ voice_assistant:
         condition:
           and:
             - switch.is_on: voice_support_active
-            - not: voice_assistant.is_active
+            - not: voice_assistant.is_running
         then:
           - voice_assistant.start_continuous:
   on_end:
@@ -325,7 +325,7 @@ voice_assistant:
         condition:
           and:
             - switch.is_on: voice_support_active
-            - not: voice_assistant.is_active
+            - not: voice_assistant.is_running
         then:
           - voice_assistant.start_continuous:
   on_client_connected:
