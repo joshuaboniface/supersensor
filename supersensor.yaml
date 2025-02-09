@@ -620,10 +620,10 @@ sensor:
 text_sensor:
   - platform: bme68x_bsec2
     iaq_accuracy:
-      name: "BME680 IAQ Accuracy"
+      name: "BME68x IAQ Accuracy"
 
   - platform: template
-    name: "BME680 IAQ Classification"
+    name: "BME68x IAQ Classification"
     lambda: |-
       if ( int(id(bme680_iaq).state) <= 50) {
         return {"Excellent"};
