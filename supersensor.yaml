@@ -313,9 +313,6 @@ voice_assistant:
   id: assist
   on_error:
     - logger.log: "voice error"
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
     - if:
         condition:
           and:
@@ -325,9 +322,6 @@ voice_assistant:
           - voice_assistant.start_continuous:
   on_end:
     - logger.log: "voice ended"
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
     - if:
         condition:
           and:
@@ -394,10 +388,6 @@ voice_assistant:
               red: 0
               green: 1
               blue: 0
-  on_tts_end:
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
 
 light:
   - platform: rgb
