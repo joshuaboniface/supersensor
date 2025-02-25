@@ -383,7 +383,9 @@ voice_assistant:
   on_tts_start:
     - if:
         condition:
-          lambda: return x == "Sorry, I couldn't understand that";
+        - lambda: |-
+            ESP_LOGI("tts_response", "%s", x.c_str());
+            return x.rfind("Sorry", 0) == 0;
         then:
           - logger.log: "Command failed!"
           - light.turn_on:
