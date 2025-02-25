@@ -109,11 +109,11 @@ script:
               red: 1
               green: 1
               blue: 1
-              transition_length: 2s
+              transition_length: 1s
         else:
           - light.turn_off:
               id: output_led
-              transition_length: 2s
+              transition_length: 1s
         
   - id: pir_handler
     then:
