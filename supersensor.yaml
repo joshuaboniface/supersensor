@@ -109,11 +109,11 @@ script:
               red: 1
               green: 1
               blue: 1
-              transition_length: 1s
+              transition_length: 2s
         else:
           - light.turn_off:
               id: output_led
-              transition_length: 1s
+              transition_length: 2s
         
   - id: pir_handler
     then:
@@ -351,7 +351,7 @@ voice_assistant:
   on_client_connected:
     - light.turn_off:
         id: output_led
-        transition_length: 1s
+        transition_length: 2s
     - script.execute: light_off
   on_client_disconnected:
     - light.turn_on:
