@@ -96,6 +96,25 @@ globals:
     initial_value: "0"
 
 script:
+  - id: light_off
+    then:
+      if:
+        condition:
+          - binary_sensor.is_on: supersensor_occupancy
+          - switch.is_on: enable_presence_led
+        then:
+          - light.turn_on:
+              id: output_led
+              brightness: 15%
+              red: 1
+              green: 1
+              blue: 1
+              transition_length: 1s
+        else:
+          - light.turn_off:
+              id: output_led
+              transition_length: 1s
+        
   - id: pir_handler
     then:
       - lambda: |-
@@ -332,13 +351,13 @@ voice_assistant:
   on_client_connected:
     - light.turn_off:
         id: output_led
+        transition_length: 1s
+    - script.execute: light_off
   on_client_disconnected:
     - light.turn_on:
         id: output_led
         effect: flash_white
   on_wake_word_detected:
-    - light.turn_off:
-        id: output_led
     - light.turn_on:
         id: output_led
         brightness: 100%
@@ -360,13 +379,8 @@ voice_assistant:
         green: 1
         blue: 1
   on_stt_end:
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
+    - script.execute: light_off
   on_tts_start:
-    - light.turn_off:
-        id: output_led
-        transition_length: 1s
     - if:
         condition:
           lambda: return x == "Sorry, I couldn't understand that";
@@ -413,9 +427,7 @@ light:
           name: hold
           sequence:
             - delay: 5s
-            - light.turn_off:
-                id: output_led
-                transition_length: 1s
+            - script.execute: light_off
   
 output:
   - platform: ledc
@@ -459,6 +471,10 @@ binary_sensor:
     name: "SuperSensor Occupancy"
     id: supersensor_occupancy
     device_class: occupancy
+    on_press:
+      - script.execute: light_off
+    on_release:
+      - script.execute: light_off
 
   - platform: gpio
     name: "PIR GPIO"
@@ -726,6 +742,18 @@ switch:
     on_turn_off:
       - voice_assistant.stop:
       - lambda: id(assist).set_use_wake_word(false);
+
+  # Global enable/disable for presence LED
+  - platform: template
+    name: "Enable Presence LED"
+    icon: mdi:lightbulb-alert
+    id: enable_presence_led
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - script.execute: light_off
+    on_turn_off:
+      - script.execute: light_off
 
   - platform: ld2410
     engineering_mode:
