@@ -75,6 +75,11 @@ globals:
     restore_value: yes
     initial_value: "200"
 
+  - id: temperature_offset
+    type: float
+    restore_value: yes
+    initial_value: "0.0"
+
   - id: pir_hold_time
     type: int
     restore_value: yes
@@ -531,6 +536,8 @@ sensor:
       name: "BME680 Temperature"
       id: bme680_temperature
       oversampling: 16x
+      filters:
+        - offset: !lambda return id(temperature_offset);
     pressure:
       name: "BME680 Pressure"
       id: bme680_pressure
@@ -730,6 +737,7 @@ switch:
       - switch.turn_on: voice_support_active
     on_turn_off:
       - switch.turn_off: voice_support_active
+
   # Active voice support flag/switch
   - platform: template
     name: "Voice Support Active"
@@ -780,6 +788,20 @@ number:
         - globals.set:
             id: gas_resistance_ceiling
             value: !lambda 'return int(x);'
+
+  - platform: template
+    name: "Temperature Offset"
+    id: temperature_offset_setter
+    min_value: -7
+    max_value: 3
+    step: 0.1
+    lambda: |-
+      return id(temperature_offset);
+    set_action:
+      then:
+        - globals.set:
+            id: temperature_offset
+            value: !lambda 'return float(x);'
 
   # PIR Hold Time:
   # The number of seconds after motion detection for the PIR sensor to remain held on
