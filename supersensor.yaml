@@ -789,6 +789,8 @@ number:
             id: gas_resistance_ceiling
             value: !lambda 'return int(x);'
 
+  # Temperature offset:
+  # A calibration from -7 to +3 for the temperature sensor of the BME680
   - platform: template
     name: "Temperature Offset"
     id: temperature_offset_setter
