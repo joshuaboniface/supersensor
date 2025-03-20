@@ -284,7 +284,6 @@ mdns:
 wifi:
   ap: {}
   domain: ""
-  fast_connect: true
   output_power: 8.5dB
   reboot_timeout: 15min
   power_save_mode: none
