@@ -227,37 +227,38 @@ script:
           int light_counts = (id(occupancy_clear_mode) & ( 1 << 0 )) >> 0;
 
           // Determine our results
+          bool new_state = false;
           if (pir_counts & radar_counts & light_counts) {
             // Logical AND of pir & radar & light
-            ESP_LOGD("occupancy_clear_handler", "PIR & Radar & Light: %i", pir & radar & light);
-            id(supersensor_occupancy).publish_state(pir & radar & light);
+            new_state = pir & radar & light;
           } else if (pir_counts & radar_counts) {
             // Logical AND of pir & radar
-            ESP_LOGD("occupancy_clear_handler", "PIR & Radar: %i", pir & radar);
-            id(supersensor_occupancy).publish_state(pir & radar);
+            new_state = pir & radar;
           } else if (pir_counts & light_counts) {
             // Logical AND of pir & light
-            ESP_LOGD("occupancy_clear_handler", "PIR & Light: %i", pir & light);
-            id(supersensor_occupancy).publish_state(pir & light);
+            new_state = pir & light;
           } else if (radar_counts & light_counts) {
             // Logical AND of radar & light
-            ESP_LOGD("occupancy_clear_handler", "Radar & Light: %i", radar & light);
-            id(supersensor_occupancy).publish_state(radar & light);
+            new_state = radar & light;
           } else if (pir_counts) {
             // Only pir
-            ESP_LOGD("occupancy_clear_handler", "PIR: %i", pir);
-            id(supersensor_occupancy).publish_state(pir);
+            new_state = pir;
           } else if (radar_counts) {
             // Only radar
-            ESP_LOGD("occupancy_clear_handler", "Radar: %i", radar);
-            id(supersensor_occupancy).publish_state(radar);
+            new_state = radar;
           } else if (light_counts) {
             // Only light
-            ESP_LOGD("occupancy_clear_handler", "Light: %i", light);
-            id(supersensor_occupancy).publish_state(light);
-          } else {
-            ESP_LOGD("occupancy_clear_handler", "None");
-            id(supersensor_occupancy).publish_state(false);
+            new_state = light;
+          }
+          
+          ESP_LOGD("occupancy_clear_handler", "New state: %s", new_state ? "true" : "false");
+          
+          // Force update even if state hasn't changed
+          id(supersensor_occupancy).publish_state(new_state);
+          
+          // Add a delayed re-publish to ensure state propagation
+          if (!new_state) {
+            id(supersensor_occupancy).publish_state(new_state);
           }
 
 preferences:
