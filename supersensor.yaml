@@ -45,9 +45,11 @@ esphome:
         - delay: 5s
         - if:
             condition:
-              and:
-                - switch.is_on: enable_voice_support
+              switch.is_on: enable_voice_support
             then:
+              - logger.log: "Initializing voice assistant on boot"
+              - switch.turn_off: voice_support_active
+              - delay: 2s
               - switch.turn_on: voice_support_active
 
 dashboard_import:
@@ -270,6 +272,19 @@ logger:
 
 api:
   reboot_timeout: 15min
+  services:
+    - service: restart_voice_assistant
+      then:
+        - logger.log: "Manually restarting voice assistant"
+        - voice_assistant.stop:
+        - delay: 2s
+        - if:
+            condition:
+              switch.is_on: enable_voice_support
+            then:
+              - switch.turn_off: voice_support_active
+              - delay: 1s
+              - switch.turn_on: voice_support_active
 
 ota:
   platform: esphome
@@ -320,10 +335,11 @@ interval:
       - if:
           condition:
             and:
+              - switch.is_on: enable_voice_support
               - switch.is_on: voice_support_active
               - not: voice_assistant.is_running
           then:
-            - logger.log: "voice assistant not running; restarting"
+            - logger.log: "Voice assistant not running but should be; restarting"
             - voice_assistant.start_continuous:
 
   # Regular state reporting to HASS
@@ -392,6 +408,8 @@ voice_assistant:
         id: output_led
         transition_length: 2s
     - script.execute: light_off
+    - lambda: |-
+        id(voice_support_active).publish_state(true);
   on_client_disconnected:
     - light.turn_on:
         id: output_led
@@ -785,6 +803,8 @@ switch:
     entity_category: config
     on_turn_on:
       - lambda: id(assist).set_use_wake_word(true);
+      - voice_assistant.stop:
+      - delay: 1s
       - voice_assistant.start_continuous:
     on_turn_off:
       - voice_assistant.stop:
