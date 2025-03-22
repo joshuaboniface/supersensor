@@ -76,37 +76,37 @@ esp32:
 globals:
   - id: gas_resistance_ceiling
     type: int
-    restore_value: yes
+    restore_value: true
     initial_value: "200"
 
   - id: temperature_offset
     type: float
-    restore_value: yes
+    restore_value: true
     initial_value: "0.0"
 
   - id: humidity_offset
     type: float
-    restore_value: yes
+    restore_value: true
     initial_value: "0.0"
 
   - id: pir_hold_time
     type: int
-    restore_value: yes
+    restore_value: true
     initial_value: "15"
 
   - id: light_presence_threshold
     type: int
-    restore_value: yes
+    restore_value: true
     initial_value: "30"
 
   - id: occupancy_detect_mode
     type: int
-    restore_value: yes
+    restore_value: true
     initial_value: "0"
 
   - id: occupancy_clear_mode
     type: int
-    restore_value: yes
+    restore_value: true
     initial_value: "0"
 
   - id: last_api_connected_time
@@ -1004,8 +1004,8 @@ select:
       - "Light Only"            # 001 = 1
       - "None"                  # 000 = 0
     initial_option: "None"
-    optimistic: yes
-    restore_value: yes
+    optimistic: true
+    restore_value: true
     set_action:
       - globals.set:
           id: occupancy_detect_mode
@@ -1066,8 +1066,8 @@ select:
       - "Light Only"            # 001 = 1
       - "None"                  # 000 = 0
     initial_option: "None"
-    optimistic: yes
-    restore_value: yes
+    optimistic: true
+    restore_value: true
     set_action:
       - globals.set:
           id: occupancy_clear_mode
