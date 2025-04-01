@@ -1,0 +1,71 @@
+---
+
+esphome:
+  name: utemp
+  name_add_mac_suffix: true
+  friendly_name: "µtemp Sensor"
+  project:
+    name: "Joshua Boniface.µtemp"
+    version: "1.1"
+
+dashboard_import:
+  package_import_url: github://joshuaboniface/supersensor/utemp.yaml
+
+esp8266:
+  board: esp01_1m
+  restore_from_flash: true
+
+preferences:
+  flash_write_interval: 15sec
+
+logger:
+  level: INFO
+  baud_rate: 0
+
+api:
+  reboot_timeout: 15min
+
+ota:
+  platform: esphome
+
+web_server:
+  port: 80
+
+captive_portal:
+
+mdns:
+  disabled: false
+
+wifi:
+  ap: {}
+  domain: ""
+  output_power: 8.5dB
+  reboot_timeout: 15min
+  power_save_mode: none
+
+i2c:
+  - id: i2c_bus
+    sda: GPIO3
+    scl: GPIO4
+    scan: true
+
+sensor:
+  - platform: bmp280_i2c
+    temperature:
+      name: "Temperature"
+      oversampling: 16x
+    pressure:
+      name: "Pressure"
+    address: 0x77
+    update_interval: 60s
+
+  - platform: sgp30
+    eco2:
+      name: "eCO2"
+      accuracy_decimals: 1
+    tvoc:
+      name: "TVOC"
+      accuracy_decimals: 1
+    store_baseline: yes
+    address: 0x58
+    update_interval: 1s
