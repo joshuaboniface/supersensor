@@ -45,20 +45,11 @@ wifi:
 
 i2c:
   - id: i2c_bus
-    sda: GPIO3
+    sda: GPIO5
     scl: GPIO4
     scan: true
 
 sensor:
-  - platform: bmp280_i2c
-    temperature:
-      name: "Temperature"
-      oversampling: 16x
-    pressure:
-      name: "Pressure"
-    address: 0x77
-    update_interval: 60s
-
   - platform: sgp30
     eco2:
       name: "eCO2"
@@ -68,4 +59,13 @@ sensor:
       accuracy_decimals: 1
     store_baseline: yes
     address: 0x58
-    update_interval: 1s
+    update_interval: 15s
+
+  - platform: bmp280_i2c
+    temperature:
+      name: "Temperature"
+      oversampling: 16x
+    pressure:
+      name: "Pressure"
+    address: 0x76
+    update_interval: 15s
