@@ -116,12 +116,12 @@ button:
 
 number:
   # Temperature offset:
-  # A calibration from -7 to +3 for the temperature sensor of the BMP280
+  # A calibration from -10 to +6 for the temperature sensor of the BMP280
   - platform: template
     name: "Temperature Offset"
     id: temperature_offset_setter
-    min_value: -7
-    max_value: 3
+    min_value: -10
+    max_value: 6
     step: 0.1
     lambda: |-
       return id(temperature_offset);
