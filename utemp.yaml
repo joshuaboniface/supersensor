@@ -78,6 +78,42 @@ sensor:
     address: 0x76
     update_interval: 15s
 
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: version
+    name: "ESPHome Version"
+    entity_category: diagnostic
+
+  - platform: wifi_info
+    ip_address:
+      name: "WiFi IP Address"
+    ssid:
+      name: "WiFi SSID"
+    bssid:
+      name: "WiFi BSSID"
+    mac_address:
+      name: "WiFi MAC Address"
+
+button:
+  - platform: restart
+    name: "ESP8266 Restart"
+    icon: mdi:power-cycle
+    entity_category: diagnostic
+
+  - platform: factory_reset
+    name: "ESP8266 Factory Reset"
+    icon: mdi:restart-alert
+    entity_category: diagnostic
+
 number:
   # Temperature offset:
   # A calibration from -7 to +3 for the temperature sensor of the BMP280
