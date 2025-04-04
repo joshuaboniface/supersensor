@@ -77,6 +77,7 @@ sensor:
       name: "Pressure"
     address: 0x76
     update_interval: 15s
+    iir_filter: 16x
 
   - platform: wifi_signal
     name: "WiFi Signal"
