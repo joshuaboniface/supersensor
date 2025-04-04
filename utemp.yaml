@@ -1,5 +1,10 @@
 ---
 
+#
+# utemp is a tiny sensor with a BMP280 and an SGP30 on it that I use for basic temperature/AQ monitoring
+# in my rack. It's here so I can use it as a package but I don't really expect anyone else to build one.
+#
+
 esphome:
   name: utemp
   name_add_mac_suffix: true
