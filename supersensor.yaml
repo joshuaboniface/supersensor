@@ -475,7 +475,7 @@ light:
           name: flash_white
           colors:
             - state: true
-              brightness: 50%
+              brightness: 15%
               red: 100%
               green: 90%
               blue: 90%
