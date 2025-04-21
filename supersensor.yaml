@@ -89,6 +89,11 @@ globals:
     restore_value: true
     initial_value: "0.0"
 
+  - id: pressure_offset
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+
   - id: pir_hold_time
     type: int
     restore_value: true
@@ -600,6 +605,9 @@ sensor:
       name: "BME680 Pressure"
       id: bme680_pressure
       oversampling: 16x
+      filters:
+        - lambda: return (round(x));
+        - offset: !lambda return id(pressure_offset);
     gas_resistance:
       name: "BME680 Gas Resistance"
       id: bme680_gas_resistance
@@ -849,7 +857,7 @@ number:
   # Temperature offset:
   # A calibration from -7 to +3 for the temperature sensor of the BME680
   - platform: template
-    name: "Temperature Offset"
+    name: "BME680 Temperature Offset"
     id: temperature_offset_setter
     min_value: -7
     max_value: 3
@@ -865,7 +873,7 @@ number:
   # Humidity offset:
   # A calibration from -10 to +10 for the humidity sensor of the BME680
   - platform: template
-    name: "Humidity Offset"
+    name: "BME680 Humidity Offset"
     id: humidity_offset_setter
     min_value: -10
     max_value: 10
@@ -876,6 +884,22 @@ number:
       then:
         - globals.set:
             id: humidity_offset
+            value: !lambda 'return float(x);'
+
+  # Pressure offset:
+  # A calibration from -25 to +25 for the barometric pressure sensor of the BME680
+  - platform: template
+    name: "BME680 Pressure Offset"
+    id: pressure_offset_setter
+    min_value: -25
+    max_value: 25
+    step: 1
+    lambda: |-
+      return id(pressure_offset);
+    set_action:
+      then:
+        - globals.set:
+            id: pressure_offset
             value: !lambda 'return float(x);'
 
   # PIR Hold Time:
