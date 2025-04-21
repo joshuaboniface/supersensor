@@ -605,6 +605,7 @@ sensor:
       name: "BME680 Pressure"
       id: bme680_pressure
       oversampling: 16x
+      accuracy_decimals: 0
       filters:
         - lambda: return (round(x));
         - offset: !lambda return id(pressure_offset);
