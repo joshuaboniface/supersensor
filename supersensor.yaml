@@ -652,7 +652,7 @@ sensor:
     name: "BME680 Relative Pressure"
     id: bme680_relative_pressure
     unit_of_measurement: hPa
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     update_interval: 15s
     lambda: |-
       // Get the current absolute pressure in hPa
@@ -677,7 +677,7 @@ sensor:
       // h = height above sea level
       // R = universal gas constant (8.31432 N·m/(mol·K))
       // T = temperature in Kelvin
-      float relative_pressure = abs_pressure * exp(9.80665 * 0.0289644 * elevation / (8.31432 * temp_kelvin));
+      float relative_pressure = round(abs_pressure * exp(9.80665 * 0.0289644 * elevation / (8.31432 * temp_kelvin)));
 
       return relative_pressure;
 
