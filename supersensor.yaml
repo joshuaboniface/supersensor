@@ -94,6 +94,11 @@ globals:
     restore_value: true
     initial_value: "0.0"
 
+  - id: elevation_meters
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+
   - id: pir_hold_time
     type: int
     restore_value: true
@@ -138,7 +143,7 @@ script:
           - light.turn_off:
               id: output_led
               transition_length: 1s
-        
+
   - id: pir_handler
     then:
       - lambda: |-
@@ -203,12 +208,12 @@ script:
             // Only light
             new_state = light;
           }
-          
+
           ESP_LOGD("occupancy_detect_handler", "New state: %s", new_state ? "true" : "false");
-          
+
           // Force update even if state hasn't changed
           id(supersensor_occupancy).publish_state(new_state);
-          
+
           // Add a delayed re-publish to ensure state propagation
           if (new_state) {
             id(supersensor_occupancy).publish_state(new_state);
@@ -257,12 +262,12 @@ script:
             // Only light
             new_state = light;
           }
-          
+
           ESP_LOGD("occupancy_clear_handler", "New state: %s", new_state ? "true" : "false");
-          
+
           // Force update even if state hasn't changed
           id(supersensor_occupancy).publish_state(new_state);
-          
+
           // Add a delayed re-publish to ensure state propagation
           if (!new_state) {
             id(supersensor_occupancy).publish_state(new_state);
@@ -456,7 +461,7 @@ voice_assistant:
               brightness: 100%
               red: 1
               green: 0
-              blue: 0 
+              blue: 0
         else:
           - logger.log: "Command successful!"
           - light.turn_on:
@@ -492,7 +497,7 @@ light:
           sequence:
             - delay: 5s
             - script.execute: light_off
-  
+
 output:
   - platform: ledc
     id: rgb_r
@@ -640,6 +645,41 @@ sensor:
           normalized_air_quality = 100;
       }
       return normalized_air_quality;
+
+  # Relative Pressure:
+  # Calculates the relative pressure based on the elevation above sea level
+  - platform: template
+    name: "BME680 Relative Pressure"
+    id: bme680_relative_pressure
+    unit_of_measurement: hPa
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      // Get the current absolute pressure in hPa
+      float abs_pressure = id(bme680_pressure).state;
+
+      // Get the current temperature in Celsius
+      float temperature = id(bme680_temperature).state;
+
+      // Get the elevation in meters
+      float elevation = id(elevation_meters);
+
+      // Convert temperature to Kelvin
+      float temp_kelvin = temperature + 273.15;
+
+      // Calculate relative pressure using the barometric formula
+      // P0 = P * exp(g * M * h / (R * T))
+      // where:
+      // P0 = sea level pressure
+      // P = absolute pressure
+      // g = gravitational acceleration (9.80665 m/s²)
+      // M = molar mass of Earth's air (0.0289644 kg/mol)
+      // h = height above sea level
+      // R = universal gas constant (8.31432 N·m/(mol·K))
+      // T = temperature in Kelvin
+      float relative_pressure = abs_pressure * exp(9.80665 * 0.0289644 * elevation / (8.31432 * temp_kelvin));
+
+      return relative_pressure;
 
   - platform: tsl2591
     address: 0x29
@@ -901,6 +941,22 @@ number:
       then:
         - globals.set:
             id: pressure_offset
+            value: !lambda 'return float(x);'
+
+  # Elevation in meters:
+  # The elevation above sea level for relative pressure calculation
+  - platform: template
+    name: "Elevation (meters)"
+    id: elevation_meters_setter
+    min_value: -100
+    max_value: 10000
+    step: 1
+    lambda: |-
+      return id(elevation_meters);
+    set_action:
+      then:
+        - globals.set:
+            id: elevation_meters
             value: !lambda 'return float(x);'
 
   # PIR Hold Time:
