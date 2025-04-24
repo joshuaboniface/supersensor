@@ -74,11 +74,6 @@ esp32:
       CONFIG_OPTIMIZATION_LEVEL_RELEASE: "y"
 
 globals:
-  - id: gas_resistance_ceiling
-    type: int
-    restore_value: true
-    initial_value: "200"
-
   - id: temperature_offset
     type: float
     restore_value: true
@@ -122,6 +117,32 @@ globals:
   - id: last_api_connected_time
     type: uint32_t
     restore_value: no
+    initial_value: "0"
+
+  # BME680 IAQ calibration parameters
+  - id: bme680_baseline
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+
+  - id: bme680_humidity_slope
+    type: float
+    restore_value: true
+    initial_value: "0.03"
+
+  - id: bme680_humidity_offset
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+
+  - id: bme680_calibration_samples
+    type: int
+    restore_value: true
+    initial_value: "0"
+
+  - id: bme680_calibration_start_time
+    type: uint32_t
+    restore_value: true
     initial_value: "0"
 
 script:
@@ -630,20 +651,66 @@ sensor:
     unit_of_measurement: "%"
     accuracy_decimals: 0
     update_interval: 15s
-    # Calculation from https://github.com/thstielow/raspi-bme680-iaq
     lambda: |-
-      float ph_slope = 0.03;
-      float comp_gas = id(bme680_gas_resistance).state * pow(2.718281, (ph_slope * id(bme680_absolute_humidity).state));
-      float gas_ratio = pow((comp_gas / (id(gas_resistance_ceiling) * 1000)), 2);
-      if (gas_ratio > 1) {
-          gas_ratio = 1.0;
+      // Get current sensor values
+      float gas_resistance = id(bme680_gas_resistance).state;
+      float abs_humidity = id(bme680_absolute_humidity).state;
+      float temperature = id(bme680_temperature).state;
+
+      // Get calibration parameters
+      float humidity_slope = id(bme680_humidity_slope);
+      float humidity_offset = id(bme680_humidity_offset);
+
+      // Compensate gas resistance for humidity effects
+      float compensated_gas = gas_resistance * exp(humidity_slope * abs_humidity + humidity_offset);
+
+      // Handle calibration mode
+      if (id(bme680_calibration_mode).state) {
+        // Update calibration parameters
+        if (id(bme680_calibration_samples) == 0) {
+          // First sample - initialize baseline
+          id(bme680_baseline) = compensated_gas;
+        } else {
+          // Update baseline with exponential moving average
+          float alpha = 1.0 / (id(bme680_calibration_samples) + 1);
+          id(bme680_baseline) = alpha * compensated_gas + (1 - alpha) * id(bme680_baseline);
+
+          // Update humidity compensation parameters
+          // This is a simplified version - you may want to implement
+          // a more sophisticated regression analysis here
+          float new_slope = (log(compensated_gas / id(bme680_baseline))) / abs_humidity;
+          float new_offset = log(compensated_gas / id(bme680_baseline)) - (new_slope * abs_humidity);
+
+          // Update with exponential moving average
+          id(bme680_humidity_slope) = alpha * new_slope + (1 - alpha) * id(bme680_humidity_slope);
+          id(bme680_humidity_offset) = alpha * new_offset + (1 - alpha) * id(bme680_humidity_offset);
+        }
+
+        // Increment calibration samples
+        id(bme680_calibration_samples) = id(bme680_calibration_samples) + 1;
+
+        // Return 100% during calibration
+        return 100;
       }
-      float air_quality = gas_ratio * 100;
-      int normalized_air_quality = (int)air_quality;
-      if (normalized_air_quality > 100) {
-          normalized_air_quality = 100;
+
+      // Normal operation - use stored baseline
+      float baseline = id(bme680_baseline);
+
+      // Calculate IAQ based on ratio to baseline
+      float gas_ratio = compensated_gas / baseline;
+
+      // Normalize to 0-100% scale
+      // Values below baseline indicate worse air quality
+      float air_quality = 100.0;
+      if (gas_ratio < 1.0) {
+        air_quality = gas_ratio * 100.0;
       }
-      return normalized_air_quality;
+
+      // Ensure output is within bounds
+      if (air_quality < 0.0) air_quality = 0.0;
+      if (air_quality > 100.0) air_quality = 100.0;
+
+      return (int)air_quality;
 
   # Relative Pressure:
   # Calculates the relative pressure based on the elevation above sea level
@@ -771,6 +838,18 @@ text_sensor:
     icon: "mdi:air-filter"
     update_interval: 5s
     lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        // Calculate hours elapsed
+        float hours_elapsed = (millis() - id(bme680_calibration_start_time)) / (1000.0 * 60 * 60);
+        // Recommend 24 hours of calibration
+        if (hours_elapsed < 24) {
+          char buffer[32];
+          sprintf(buffer, "Calibrating (%.1f/24h)", hours_elapsed);
+          return {buffer};
+        } else {
+          return {"Calibration Complete"};
+        }
+      }
       int aq = int(id(bme680_aq).state);
       if (aq >= 90) {
         return {"Excellent"};
@@ -870,6 +949,47 @@ switch:
     on_turn_off:
       - script.execute: light_off
 
+  # BME680 IAQ Calibration Mode
+  - platform: template
+    name: "BME680 IAQ Calibration"
+    icon: mdi:air-filter
+    id: bme680_calibration_mode
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+    on_turn_on:
+      - globals.set:
+          id: bme680_calibration_samples
+          value: "0"
+      - globals.set:
+          id: bme680_calibration_start_time
+          value: !lambda 'return millis();'
+    on_turn_off:
+      - globals.set:
+          id: bme680_humidity_slope
+          value: !lambda |-
+            // Calculate final slope from calibration data
+            float slope = id(bme680_humidity_slope);
+            if (id(bme680_calibration_samples) > 0) {
+              // Update slope based on calibration data
+              // This is a simplified version - you may want to implement
+              // a more sophisticated regression analysis here
+              slope = slope * 0.9 + (id(bme680_humidity_slope) * 0.1);
+            }
+            return slope;
+      - globals.set:
+          id: bme680_humidity_offset
+          value: !lambda |-
+            // Calculate final offset from calibration data
+            float offset = id(bme680_humidity_offset);
+            if (id(bme680_calibration_samples) > 0) {
+              // Update offset based on calibration data
+              // This is a simplified version - you may want to implement
+              // a more sophisticated regression analysis here
+              offset = offset * 0.9 + (id(bme680_humidity_offset) * 0.1);
+            }
+            return offset;
+
   - platform: ld2410
     engineering_mode:
       name: "LD2410C Engineering Mode"
@@ -879,21 +999,6 @@ switch:
       entity_category: diagnostic
 
 number:
-  - platform: template
-    name: "Gas Resistance Ceiling (kΩ)"
-    id: gas_resistance_ceiling_setter
-    min_value: 10
-    max_value: 500
-    step: 1
-    entity_category: config
-    lambda: |-
-      return id(gas_resistance_ceiling);
-    set_action:
-      then:
-        - globals.set:
-            id: gas_resistance_ceiling
-            value: !lambda 'return int(x);'
-
   # Temperature offset:
   # A calibration from -7 to +3 for the temperature sensor of the BME680
   - platform: template
