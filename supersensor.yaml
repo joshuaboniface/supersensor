@@ -832,6 +832,195 @@ sensor:
       return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
     entity_category: diagnostic
 
+  - platform: template
+    name: "BME680 eCO2"
+    id: bme680_eco2
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 400.0; // Standard atmospheric CO2 level during calibration
+      }
+
+      // Get the current AQ value (0-100)
+      float aq = id(bme680_aq).state;
+
+      // Convert AQ to eCO2
+      // 400ppm = atmospheric CO2 level (good air quality)
+      // 2000ppm = poor air quality
+      // Linear interpolation between these points
+      float eco2 = 400.0 + ((100.0 - aq) / 100.0) * 1600.0;
+
+      return eco2;
+
+  - platform: template
+    name: "BME680 TVOC"
+    id: bme680_tvoc
+    unit_of_measurement: "ppb"
+    icon: "mdi:air-filter"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 0.0; // Clean air during calibration
+      }
+
+      // Get the current AQ value (0-100)
+      float aq = id(bme680_aq).state;
+
+      // Convert AQ to TVOC
+      // 0 ppb = very clean air
+      // 2000 ppb = poor air quality
+      // Non-linear mapping to emphasize changes in cleaner air
+      float tvoc = pow((100.0 - aq) / 100.0, 1.5) * 2000.0;
+
+      return tvoc;
+
+  - platform: template
+    name: "BME680 Air Quality Index"
+    id: bme680_aqi
+    unit_of_measurement: "AQI"
+    icon: "mdi:air-filter"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 0.0; // Perfect AQI during calibration
+      }
+
+      // Get the current AQ value (0-100)
+      float aq = id(bme680_aq).state;
+
+      // Convert to AQI scale (0-500)
+      // This is a simplified conversion - real AQI includes multiple pollutants
+      // We're using a non-linear scale to match AQI brackets
+      float aqi;
+      if (aq >= 90) {
+        // Good (0-50)
+        aqi = (100.0 - aq) * (50.0 / 10.0);
+      } else if (aq >= 70) {
+        // Moderate (51-100)
+        aqi = 50.0 + (90.0 - aq) * (50.0 / 20.0);
+      } else if (aq >= 50) {
+        // Unhealthy for Sensitive Groups (101-150)
+        aqi = 100.0 + (70.0 - aq) * (50.0 / 20.0);
+      } else if (aq >= 30) {
+        // Unhealthy (151-200)
+        aqi = 150.0 + (50.0 - aq) * (50.0 / 20.0);
+      } else if (aq >= 10) {
+        // Very Unhealthy (201-300)
+        aqi = 200.0 + (30.0 - aq) * (100.0 / 20.0);
+      } else {
+        // Hazardous (301-500)
+        aqi = 300.0 + (10.0 - aq) * (200.0 / 10.0);
+      }
+
+      return aqi;
+
+  - platform: template
+    name: "BME680 VOC Index"
+    id: bme680_voc_index
+    unit_of_measurement: "VOCi"
+    icon: "mdi:air-filter"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 1.0; // Best VOC index during calibration
+      }
+      float aq = id(bme680_aq).state;
+      // Convert to 1-500 VOC index scale (like SGP40)
+      // 1-10: Excellent
+      // 11-50: Good
+      // 51-150: Moderate
+      // 151-350: Poor
+      // >351: Unhealthy
+      return 1.0 + (500.0 - 1.0) * pow((100.0 - aq) / 100.0, 1.2);
+
+  - platform: template
+    name: "BME680 NOx Estimate"
+    id: bme680_nox
+    unit_of_measurement: "ppb"
+    icon: "mdi:molecule"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 0.0;
+      }
+      float aq = id(bme680_aq).state;
+      // Rough estimate of NOx (0-100ppb scale)
+      // The BME680 is somewhat sensitive to NOx
+      return (100.0 - aq) * 1.0;
+
+  - platform: template
+    name: "BME680 Air Quality Rating"
+    id: bme680_rating
+    unit_of_measurement: "stars"
+    icon: "mdi:star"
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 5.0;
+      }
+      float aq = id(bme680_aq).state;
+      // 5-star rating system
+      return (aq / 100.0) * 5.0;
+
+  - platform: template
+    name: "BME680 Breath VOC Equivalent"
+    id: bme680_breath_voc
+    unit_of_measurement: "ppm"
+    icon: "mdi:breath"
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 0.0;
+      }
+      float aq = id(bme680_aq).state;
+      // Breath VOC equivalent (0-10ppm scale)
+      // This is a rough estimate of what a breath VOC sensor might read
+      return (100.0 - aq) / 10.0;
+
+  - platform: template
+    name: "BME680 Pollution Level"
+    id: bme680_pollution
+    unit_of_measurement: "%"
+    icon: "mdi:factory"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 0.0;
+      }
+      float aq = id(bme680_aq).state;
+      // Invert the AQ score to get pollution percentage
+      return 100.0 - aq;
+
+  - platform: template
+    name: "BME680 Fresh Air Percentage"
+    id: bme680_fresh_air
+    unit_of_measurement: "%"
+    icon: "mdi:weather-windy"
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return 100.0;
+      }
+      // Get current gas resistance and baseline
+      float gas_resistance = id(bme680_gas_resistance).state;
+      float baseline = id(bme680_baseline);
+      // Calculate percentage of fresh air vs. stale air
+      // based on how close we are to baseline
+      float ratio = gas_resistance / baseline;
+      if (ratio > 1.0) ratio = 1.0;
+      return ratio * 100.0;
+
 text_sensor:
   - platform: template
     name: "BME680 AQ Classification"
@@ -885,6 +1074,61 @@ text_sensor:
       name: "LD2410C Firmware Version"
     mac_address:
       name: "LD2410C MAC Address"
+
+  - platform: template
+    name: "BME680 VOC Level"
+    icon: "mdi:air-filter"
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return {"Calibrating"};
+      }
+      float voc_index = id(bme680_voc_index).state;
+      if (voc_index <= 10) {
+        return {"Excellent"};
+      } else if (voc_index <= 50) {
+        return {"Good"};
+      } else if (voc_index <= 150) {
+        return {"Moderate"};
+      } else if (voc_index <= 350) {
+        return {"Poor"};
+      } else {
+        return {"Unhealthy"};
+      }
+
+  - platform: template
+    name: "BME680 Room Health Score"
+    icon: "mdi:home-heart"
+    update_interval: 15s
+    lambda: |-
+      if (id(bme680_calibration_mode).state) {
+        return {"Calibrating"};
+      }
+
+      // Get all relevant measurements
+      float aq = id(bme680_aq).state;
+      float temp = id(bme680_temperature).state;
+      float hum = id(bme680_humidity).state;
+
+      // Check temperature comfort (18-24°C ideal)
+      bool temp_ok = (temp >= 18 && temp <= 24);
+
+      // Check humidity comfort (40-60% ideal)
+      bool hum_ok = (hum >= 40 && hum <= 60);
+
+      // Check air quality (>70 is good)
+      bool aq_ok = (aq >= 70);
+
+      // Determine overall score
+      if (temp_ok && hum_ok && aq_ok) {
+        return {"Optimal"};
+      } else if ((temp_ok && hum_ok) || (temp_ok && aq_ok) || (hum_ok && aq_ok)) {
+        return {"Good"};
+      } else if (temp_ok || hum_ok || aq_ok) {
+        return {"Fair"};
+      } else {
+        return {"Poor"};
+      }
 
 button:
   - platform: ld2410
