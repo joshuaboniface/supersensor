@@ -179,7 +179,7 @@ For clear, no states will clear occupancy; with any detect option, this
 means that occupancy will be detected only once and never clear, which
 is likely not useful.
 
-## Calibrating AQ
+## AQ Calibration Process
 
 The Supersensor uses the Bosch BME680 combination temperature, humidity,
 pressure, and gas sensor to provide a wide range of useful information about
@@ -187,130 +187,129 @@ the environmental conditions the sensor is placed in. However, this sensor
 can be tricky to work with.
 
 While it's normally recommended to use the Bosch BSEC library with this
-sensor, in my ~6 month experience I found this library to be far more trouble
-than it was worth. Specifically, it's IAQ measurement is nearly useless, with
-a strong tendency to get stuck in an upward trend constantly "calibrating"
-itself to higher and higher baselines, to the point where nonsensical values
-were being read. After much research into this, I decided to abandon the
-library in version 1.1 and went with a more custom solution.
+sensor, this library has two major defects:
 
-Instead of the BSEC, we use the stock BME680 ESPHome library, along with
-some calculations by thstielow on GitHub in their [IAQ project](https://github.com/thstielow/raspi-bme680-iaq).
-This provided some useful example code and formulae to calculate a useful
-Air Quality (AQ) value instead of the useless Bosch value.
+* It is not compatable with the ESP-IDF ESPHome framework, which is required
+for various other components (mostly, the voice subsystem).
 
-However using this method requires some manual calibration of the sensor
-after putting it together but before final use, in order to get a somewhat
-accurate value out of the AQ component. If you don't care about the AQ value,
-you can skip this, but it is recommended to take full advantage of the sensor.
+* In my experience with the library, I found it to become wildly inaccurate
+as time went on, with the sensor constantly recalibrating upwards and upwards
+until it was reading values of 500+ AQ in my interior rooms.
 
-As a quick explainer, the code leverages a combination of the "Gas Resistance"
-value provided by the sensor, along with an absolute humidity calculated from
-the temperature and relative humidity of the sensor (included ESPHome sensor),
-along with two values (one configurable, one hard-coded) and several formulae
-to arrive at the resulting AQ value. For full details of the calculation,
-see the repository linked above, which was re-implemented faithfully here.
+To avoid both issues, the Supersensor leverages the approximation calculations
+from https://github.com/thstielow/raspi-bme680-iaq, along with a bit of
+experimentation, to provide a much more reliable experience, including an
+integrated, guided calibration process.
 
-The first thing to note is that each BME680 sensor is wildly different in
-terms of gas resistance values. In the same air, I had sensors reading values
-that differed by nearly 200,000Ω, which necessitates a human-configurable
-baseline value. Further, the IAQ project recommends determining a linear
-slope value for this, but instead of trying to explain how to calculate this,
-I just went with the default slope value of 0.03 for this first iteration.
+The calibration process involves 5 steps, which are triggered by turning on the
+"BME680 AQ Calibration" switch and then guided by the "BME680 AQ Calibration
+Status" text sensor value. To calibrate for normal VOCs, I recommend using
+Isopropyl Alcohol (IPA, Rubbing Alcohol) to simulate a VOC condition; any
+percentage should work, though I use 99% which I have anyways for cleaning
+various electronic components and such. To expose the sensor to it (step 3),
+I recommend pouring a small amount of the IPA onto the corner of a piece of
+paper towel, and then holding (or taping, etc.) the paper towel with the "wet"
+corner about 5-10cm away from the BME680 sensor. The paper towel provides a
+good surface for the volatile IPA to evaporate from and get into the sensor
+quickly, while also freeing you to walk away as desired.. Ensure you prepare
+your IPA right before step 3 and not any earlier, as the evaporating IPA from
+both the bottle and paper towel will throw off the readings if done early!
 
-Thus, the main difficulty in getting a useful AQ score is finding the
-"Gas Resistance Ceiling" value. This value is configurable in the
-SuperSensor interface (Web or HomeAssistant), and should be calibrated as
-follows during the initial setup of the supersensor.
+1. Place the sensor in a known-clean (or as clean as possible) air environment;
+for instance, place it near an open window on a fresh air day, or next to an air
+purifier, etc., in a room without human occupation, for at least 60-90 minutes.
+This ensures we have a good baseline of what "clean air" is. Ideally, you will
+see the "BME680 Gas Resistance" value peak and level out around this time,
+forming a baseline "clean air" value.
 
-1. Find a known-clean room, for instance a well-ventilated, well-cleaned
-room in your house or similar. It should have fresh air (no stray VOCs) but
-also minimal drafts or outside exposure especially if there is a poor external
-AQ level. This will be your calibration reference room. Ideally, this room
-should be somewhere between 16C and 26C for optimal performance, so air
-conditioning (or a nice spring/fall day) is best.
+2. Enable the "BME680 IAQ Calibration" switch. Observe the calibration status
+closely, as the initial clean air sampling phase lasts for only 30 seconds; use
+this time to prepare your IPA source, though keep it away from the sensor until
+prompted as mentioned above.
 
-2. Turn on the SuperSensor in this environment, and connect it to your
-HomeAssistant instance; this will be critical for viewing historical graphs
-during the following steps.
+3. Expose the sensor to the IPA for ~5 minutes when prompted. If using the paper
+towel method, hold the "wet" corner between 5 and 10cm away from the sensor
+for the duration of this step.
 
-3. Let the SuperSensor run to "burn in" the gas sensor for at least 3-6 hours,
-or until the value for the Gas Resistance stabilizes. It is best to avoid much
-movement or activity in the selected calibration room to avoid disrupting
-the sensor during this time. It is also best to ensure that the ambient
-temperature changes as little as possible during this time.
+4. Remove the IPA when prompted; if you run a little over at this time, that is
+fine, and longer exposure times will simply lower the baseline for "bad" air
+further. The sensor will continue calibrating, waiting for the lowest gas
+resistance value before continuing. Once you remove the IPA it is best to now
+leave the area (taking the IPA with you) to avoid incidental contamination both
+by the IPA and your breath CO2 during the recovery phase.
 
-4. Review the resulting graph of Gas Resistance over the burn-in period. You
-can usually ignore the first hour or two as the sensor was burning in, and
-focus instead on the last hour or so.
+5. Once a minimum value has been reached, the sensor will begin calibrating the
+return to the original "clean air" value, within 10%, waiting in 10 minute
+intervals. This process may take up to 2 hours, and it is very important not to
+disturb the calibration during this time by reentering the room, power-cycling
+the Supersensor, or otherwise interfering with it in any way. If the sensor
+becomes "stuck" in this phase for longer than 3-4 hours, and the gas resistance
+is clearly plateauing well below the original clean air threshold, then your
+calibration is invalid. Stop it by turning off the switch, waiting for the
+levels to truly normalize, and then trying again from the start; unfortunately
+this happens occasionally due to the fickle nature of the BME680.
 
-5. Make note of the highest mean value reached by the sensor during this time.
-This will be your baseline value for calibrating the Gas Resistance Ceiling.
+6. Once equilibrium has bee reached, the sensor will report "Calibrated", the
+date and time will be logged in the "BME680 AQ Last Calibration" sensor, and
+the calibration switch will turn off. Your sensor has now saved the calibration
+values to NVRAM and is ready to report actual IAQ values within the detected
+range. You may test it by bringing some IPA close to the sensor again and
+observing how the AQ value falls.
 
-6. Round the value up to the nearest 1000. For example, if the maximum value
-was 195732.1, round this to 196000.0.
+For added benefit, several diagnostic category sensors are provided to show the
+values obtained from the last calibration. You can use these to see how close
+your calibration is to reality over time. Note that the actual AQ calculation
+discards the top 10% of the range (i.e. the 100% clean value is considered to
+be 90% of the detected maximum to provide wiggle room for normal habitation
+conditions) and it takes the absolute humidity into account, so humidity
+changes will affect the AQ value.
 
-7. Find the difference in the temperature of the BME680 temperature sensor
-from 20C, called ΔT below. I found this part by trial-and-error, so this is
-not precise, but as an example if the calibration room is reporting 26C, your
-ΔT value in the next step is 6. If your temperature was below 20C, use 0.
+Once calibrated, you should not need to recalibrate for quite a while; the
+sensor provides a "BME680 Last Calibration" datetime value sensor showing when
+it was last calibrated. Recalibrate only if you notice you need it (i.e.
+readings become inaccurate) or if you move the sensor somewhere else.
 
-8. Use one of the following formulae to come up with your offset value, which
-depends on the maximum value range found in step 6.
+A future planned major revision of the Supersensor (2.0) will discard the
+BME680 in favour of alternate sensors, but for now this is the best we can do,
+because I can't justify replacing my 9 Supersensors!
 
-   * `<100,000`: 200 * ΔT = 0-1200
-   * `100,000-200,000`: 500 * ΔT = 0-3000
-   * `>200,000`: 1000 * ΔT = 0-6000
+## Supersensor Dashboard
 
-Again this value is rough, and might not even really be needed, but helps
-avoid weird issues with AQ values dropping suddenly later as temperature
-and humidity changes.
+If you have several Supersensors, you may find this dashboard handy. It
+provides a convenient way to show multiple Supersensors in a standard way, with
+all the relevant sensors and configuration values available.
 
-9. Add your offset value from step 8 to the rounded maximum from step 6.
-For example, 196000.0 with a ΔT of 5C (25C ambient) yields 201000.0
+To use this dashboard, create a new Dashboard and paste the following YAML into
+it. You can then add your individual Supersensors by their MAC ID, and then
+duplicate the view for each sensor, replacing the `supersensor_id` with the
+MAC ID of your individual Supersensors.
 
-10. Divide the result from 9 by 1000 to give a number from 1-500. This
-is the value to enter as the "Gas Resistance Ceiling (kΩ)" for this
-sensor. This value will be saved in the NV-RAM of the ESP32 and preserved
-on reboots.
+This dashboard requires the [Decluttering Card custom card](https://github.com/custom-cards/decluttering-card)
+to function properly.
 
-At this point, you should have a value that results in the "BME680 AQ"
-sensor reporting 100% AQ, i.e. clean air. You can now test to ensure
-that the value will correctly drop as VOCs are added.
+Some of these sensors are custom templates. For instance, "Device Location" is
+crafted based on what I name the Supersensors during adoption, using this
+sensor template:
 
-1. Take a Sharpie permanent marker, Acetone nail polish remover, or some
-other VOC that the BME680 gas sensor can detect, and place it near the
-sensor. For example with a sharpie, remove the cap and place the tip
-about 1-2cm from the sensor, or place a small capful of nail polish
-remover about 3-5cm from the sensor.
+```
+{{ device_attr('binary_sensor.supersensor_24ac2c_supersensor_occupancy', 'name')|replace('Supersensor 24ac2c ', '') }}
+```
 
-2. Wait about 30 seconds.
+Which will show something like "Joshua's Bedroom" or "Garage".
 
-3. You should see the AQ value drop precipitously, into the order of 50%
-or lower, and ideally closer to 0-20%. If the value remains higher than
-50% with this test, your calculated Gas Resistance Ceiling might be
-too low, and should be increased in increments of 1000.
+Similarly, to avoid exposing the "internal" voice support switch, "Voice
+Support State" is a template binary sensor with the "Running" show-as device
+class to report its state:
 
-4. Remove the VOC source (replace the cap, remove the capful of remover,
-etc.) and wait about 30-60 minutes.
+```
+{{ states('switch.supersensor_24ac2c_voice_support_active') }}
+```
 
-5. You should see the AQ value and gas resistance return to their original
-values. If it is significantly lower than before, even after waiting 60+
-minutes, restart the calculation from step 5 in the previous section
-using this new value as the baseline.
+Once added, you can easily add (or remove) Supersensors from the dashboard, or
+adjust what you want to see in the dashboard by adjusting the decluttering
+template values as you see fit.
 
-At this point, the sensor should be calibrated enough for day-to-day
-casual home use, and will tell you if there is any significant
-VOC contamination in the air by dropping the AQ value from 100% to some
-lower value representing the approximate decrease in air quality. Since
-the sensor also factors in the absolute humidity (and via that, the
-ambient temperature) into the AQ calculation, high humidity will also
-drop the value, as this too impacts the air quality. Hopefully this
-is useful for your purposes.
+### Raw YAML Dashboard
 
-If you find that the AQ value still doesn't represent known reality,
-you can also tweak the in-code value for `ph_slope` on line 522, as
-it's possible your sensor differs significantly here. As mentioned
-above this is still a work in progress to determine for myself, so
-future versions may alter this or include calibration of this value
-automatically, depending on how things go in my testing.
+```
+```
