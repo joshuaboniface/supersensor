@@ -722,174 +722,94 @@ sensor:
     lambda: |-
       // Get current sensor values and validate
       float gas_resistance = id(bme680_gas_resistance).state;
-      float abs_humidity = id(bme680_absolute_humidity).state;
+      float rel_humidity = id(bme680_humidity).state;
+      float temperature = id(bme680_temperature).state;
       float clean_resistance = id(bme680_clean_resistance);
       float polluted_resistance = id(bme680_polluted_resistance);
-      float humidity_slope = id(bme680_humidity_slope);
-      float humidity_offset = id(bme680_humidity_offset);
 
-      ESP_LOGI("bme680_aq", "Input values - Gas: %.1f, Humidity: %.1f, Clean: %.1f, Polluted: %.1f, Slope: %.3f, Offset: %.3f",
-               gas_resistance, abs_humidity, clean_resistance, polluted_resistance, humidity_slope, humidity_offset);
+      ESP_LOGI("bme680_aq", "Input values - Gas: %.1f, RH: %.1f%%, Temp: %.1f°C, Clean: %.1f, Polluted: %.1f",
+               gas_resistance, rel_humidity, temperature, clean_resistance, polluted_resistance);
 
-      // Comprehensive validation of all inputs and globals
-      bool validation_failed = false;
+      // Basic validation
       if (isnan(gas_resistance) || gas_resistance <= 0) {
         ESP_LOGI("bme680_aq", "Invalid gas resistance: %.1f", gas_resistance);
-        validation_failed = true;
+        return 0;
       }
-      if (isnan(abs_humidity) || abs_humidity < 0) {
-        ESP_LOGI("bme680_aq", "Invalid absolute humidity: %.1f", abs_humidity);
-        validation_failed = true;
+      if (isnan(rel_humidity) || rel_humidity < 0 || rel_humidity > 100) {
+        ESP_LOGI("bme680_aq", "Invalid humidity: %.1f", rel_humidity);
+        return 0;
+      }
+      if (isnan(temperature) || temperature < -40 || temperature > 85) {
+        ESP_LOGI("bme680_aq", "Invalid temperature: %.1f", temperature);
+        return 0;
       }
       if (isnan(clean_resistance) || clean_resistance <= 0) {
         ESP_LOGI("bme680_aq", "Invalid clean resistance: %.1f", clean_resistance);
-        validation_failed = true;
+        return 0;
       }
-      if (isnan(polluted_resistance) || polluted_resistance < 0) {
+      if (isnan(polluted_resistance) || polluted_resistance <= 0) {
         ESP_LOGI("bme680_aq", "Invalid polluted resistance: %.1f", polluted_resistance);
-        validation_failed = true;
-      }
-      if (polluted_resistance == 0) {
-        ESP_LOGI("bme680_aq", "Uncalibrated polluted resistance");
-        validation_failed = true;
+        return 0;
       }
       if (clean_resistance <= polluted_resistance) {
-        ESP_LOGI("bme680_aq", "Clean resistance (%.1f) <= polluted resistance (%.1f)", 
+        ESP_LOGI("bme680_aq", "Clean resistance (%.1f) <= polluted resistance (%.1f)",
                  clean_resistance, polluted_resistance);
-        validation_failed = true;
-      }
-      if (isnan(humidity_slope)) {
-        ESP_LOGI("bme680_aq", "Invalid humidity slope: %.3f", humidity_slope);
-        validation_failed = true;
-      }
-      if (isnan(humidity_offset)) {
-        ESP_LOGI("bme680_aq", "Invalid humidity offset: %.3f", humidity_offset);
-        validation_failed = true;
-      }
-
-      if (validation_failed) {
-        ESP_LOGI("bme680_aq", "Input validation failed - returning 100");
-        return 100;
-      }
-
-      // Cap gas resistance to reasonable bounds (1 to 1000 kΩ)
-      float original_gas = gas_resistance;
-      if (gas_resistance > 1000000) {
-        ESP_LOGI("bme680_aq", "Gas resistance too high: %.1f -> 1000000", gas_resistance);
-        gas_resistance = 1000000;
-      }
-      if (gas_resistance < 1000) {
-        ESP_LOGI("bme680_aq", "Gas resistance too low: %.1f -> 1000", gas_resistance);
-        gas_resistance = 1000;
-      }
-      if (original_gas != gas_resistance) {
-        ESP_LOGI("bme680_aq", "Gas resistance capped from %.1f to %.1f", original_gas, gas_resistance);
-      }
-
-      // Compensate gas resistance for humidity effects
-      float exp_term = humidity_slope * abs_humidity + humidity_offset;
-      ESP_LOGI("bme680_aq", "Humidity compensation - Slope: %.3f, Offset: %.3f, Exp term: %.3f",
-               humidity_slope, humidity_offset, exp_term);
-
-      // Validate exp_term before using it
-      if (isnan(exp_term) || exp_term > 100 || exp_term < -100) {
-        ESP_LOGI("bme680_aq", "Invalid exp term: %.3f - returning 100", exp_term);
-        return 100;
-      }
-
-      float compensated_gas = gas_resistance * exp(exp_term);
-      ESP_LOGI("bme680_aq", "Compensated gas: %.1f (from %.1f)", compensated_gas, gas_resistance);
-
-      // Validate compensated value and cap it to reasonable bounds
-      if (isnan(compensated_gas) || compensated_gas <= 0 || compensated_gas > 10000000) {
-        ESP_LOGI("bme680_aq", "Invalid compensation result: %.1f (raw: %.1f, slope: %.3f, offset: %.3f)",
-                 compensated_gas, gas_resistance, humidity_slope, humidity_offset);
-        return 100;
-      }
-
-      // Update moving average
-      static float ma_buffer[240] = {0};
-      static int ma_index = 0;
-      ma_buffer[ma_index] = compensated_gas;
-      ma_index = (ma_index + 1) % 240;
-
-      float ma_sum = 0;
-      int ma_count = 0;
-      for (int i = 0; i < 240; i++) {
-        if (ma_buffer[i] > 0 && !isnan(ma_buffer[i])) {  // Add nan check for buffer values
-          ma_sum += ma_buffer[i];
-          ma_count++;
-        }
-      }
-      float moving_average = (ma_count > 0) ? (ma_sum / ma_count) : compensated_gas;
-      ESP_LOGI("bme680_aq", "Moving average: %.1f (from %d samples)", moving_average, ma_count);
-
-      // Validate moving average
-      if (isnan(moving_average) || moving_average <= 0 || moving_average > 10000000) {
-        ESP_LOGI("bme680_aq", "Invalid moving average: %.1f", moving_average);
-        return 100;
+        return 0;
       }
 
       // If in calibration mode, return 100%
       if (id(bme680_calibration_mode).state) {
-        ESP_LOGI("bme680_aq", "In calibration mode - returning 100");
         return 100;
       }
 
-      // Calculate the total range and position within it
-      float effective_clean_resistance = clean_resistance * 0.9;
-      float total_range = effective_clean_resistance - polluted_resistance;
-      float current_position = moving_average - polluted_resistance;
+      // Update moving average (5-minute window at 15s updates = 20 samples)
+      static float ma_buffer[20] = {0};
+      static int ma_index = 0;
+      ma_buffer[ma_index] = gas_resistance;
+      ma_index = (ma_index + 1) % 20;
 
-      // Validate range calculations
-      if (isnan(total_range) || total_range <= 0) {
-        ESP_LOGI("bme680_aq", "Invalid total range: %.1f", total_range);
-        return 100;
+      float ma_sum = 0;
+      int ma_count = 0;
+      for (int i = 0; i < 20; i++) {
+        if (ma_buffer[i] > 0) {
+          ma_sum += ma_buffer[i];
+          ma_count++;
+        }
       }
-      if (isnan(current_position)) {
-        ESP_LOGI("bme680_aq", "Invalid current position: %.1f", current_position);
-        return 100;
-      }
+      float moving_average = (ma_count > 0) ? (ma_sum / ma_count) : gas_resistance;
 
-      ESP_LOGI("bme680_aq", "Range calculation - Effective clean: %.1f, Total range: %.1f, Current position: %.1f",
-               effective_clean_resistance, total_range, current_position);
+      // Calculate absolute humidity using Magnus formula
+      // First calculate saturation vapor pressure
+      float temp_term = (17.62f * temperature) / (243.12f + temperature);
+      float svp = 6.112f * 100.0f * exp(temp_term);
 
-      // Define asymmetric scaling
-      float quality;
-      float relative_pos;
-      if (current_position >= total_range * 0.8) {
-        relative_pos = (current_position - (total_range * 0.8)) / (total_range * 0.2);
-        quality = 90.0 + (relative_pos * 10.0);
-        ESP_LOGI("bme680_aq", "Quality calculation (top 20%%) - Relative pos: %.3f -> Quality: %.1f%%",
-                 relative_pos, quality);
-      } else if (current_position >= total_range * 0.5) {
-        relative_pos = (current_position - (total_range * 0.5)) / (total_range * 0.3);
-        quality = 70.0 + (relative_pos * 20.0);
-        ESP_LOGI("bme680_aq", "Quality calculation (50-80%%) - Relative pos: %.3f -> Quality: %.1f%%",
-                 relative_pos, quality);
-      } else {
-        relative_pos = current_position / (total_range * 0.5);
-        quality = relative_pos * 70.0;
-        ESP_LOGI("bme680_aq", "Quality calculation (bottom 50%%) - Relative pos: %.3f -> Quality: %.1f%%",
-                 relative_pos, quality);
-      }
+      // Then calculate maximum water density using ideal gas law
+      float rho_max = svp / (461.52f * (temperature + 273.15f));
 
-      // Validate quality calculation
-      if (isnan(quality)) {
-        ESP_LOGI("bme680_aq", "Quality calculation resulted in NaN - returning 100");
-        return 100;
-      }
+      // Finally calculate absolute humidity in g/m³
+      float abs_humidity = rel_humidity * 0.1f * rho_max;
 
-      // Ensure bounds
-      float original_quality = quality;
-      if (quality < 0.0) quality = 0.0;
-      if (quality > 100.0) quality = 100.0;
-      if (original_quality != quality) {
-        ESP_LOGI("bme680_aq", "Quality capped from %.1f to %.1f", original_quality, quality);
+      ESP_LOGI("bme680_aq", "Humidity calculation - Abs: %.1f g/m³, SVP: %.1f Pa, Rho max: %.3f",
+               abs_humidity, svp, rho_max);
+
+      // Get ph_slope from global variable (will be calibrated)
+      float ph_slope = id(bme680_humidity_slope);
+      float comp_gas = moving_average * exp(ph_slope * abs_humidity);
+
+      // Calculate gas quality as ratio between compensated gas and clean air value
+      // Use quadratic scaling for steeper response at higher qualities
+      float gas_quality = (comp_gas / clean_resistance);
+      gas_quality = gas_quality * gas_quality * 100.0f;  // Square and convert to percentage
+
+      // Cap at 100%
+      if (gas_quality > 100.0f) {
+        gas_quality = 100.0f;
       }
 
-      ESP_LOGI("bme680_aq", "Final AQ value: %.1f%%", quality);
-      return (int)quality;
+      ESP_LOGI("bme680_aq", "Quality calculation - Compensated gas: %.1f, Quality: %.1f%%, ph_slope: %.3f",
+               comp_gas, gas_quality, ph_slope);
+
+      return (int)gas_quality;
 
   # Relative Pressure:
   # Calculates the relative pressure based on the elevation above sea level
@@ -1377,34 +1297,6 @@ text_sensor:
       }
 
   - platform: template
-    name: "BME680 AQ Calibration Status"
-    icon: "mdi:progress-wrench"
-    update_interval: 5s
-    lambda: |-
-      if (!id(bme680_calibration_mode).state) {
-        // Show "Inactive" only if never calibrated
-        if (id(bme680_last_calibration_time) == 0) {
-          return {"Inactive"};
-        }
-        return {"Calibrated"};
-      }
-
-      switch (id(bme680_calibration_phase)) {
-        case 0:
-          return {"Clean Air Snapshot (30s)"};
-        case 1:
-          return {"Expose Sensor to IPA (300s)"};
-        case 2:
-          return {"Remove IPA; Wait for Minimum"};
-        case 3:
-          return {"Wait for Recovery"};
-        case 4:
-          return {"Calibration Complete"};
-        default:
-          return {"Unknown"};
-      }
-
-  - platform: template
     name: "BME680 AQ Calibration Parameters"
     icon: "mdi:tune"
     entity_category: diagnostic
@@ -1432,6 +1324,42 @@ text_sensor:
       char buffer[32];
       strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&timestamp));
       return {buffer};
+
+  - platform: template
+    name: "BME680 AQ Calibration Status"
+    icon: "mdi:progress-wrench"
+    update_interval: 5s
+    lambda: |-
+      if (!id(bme680_calibration_mode).state) {
+        // Show "Inactive" only if never calibrated
+        if (id(bme680_last_calibration_time) == 0) {
+          return {"Inactive"};
+        }
+        return {"Calibrated"};
+      }
+
+      switch (id(bme680_calibration_phase)) {
+        case 0:
+          return {"Clean Air Snapshot (30s)"};
+        case 1:
+          return {"Capture Initial Humidity"};
+        case 2:
+          return {"Spray Water Mist Near Sensor (30s)"};
+        case 3:
+          return {"Wait for Maximum Humidity"};
+        case 4:
+          return {"Wait for Humidity to Dissipate (120s)"};
+        case 5:
+          return {"Expose Sensor to IPA (300s)"};
+        case 6:
+          return {"Wait for Minimum Gas Resistance"};
+        case 7:
+          return {"Wait for Return to Baseline"};
+        case 8:
+          return {"Calibration Completed and Saved"};
+        default:
+          return {"Unknown Phase"};
+      }
 
 button:
   - platform: ld2410
@@ -1506,87 +1434,174 @@ switch:
     entity_category: config
     on_turn_on:
       then:
-        # Phase 0: Initial setup
-        - logger.log: "BME680 Calibration: Starting clean air snapshot"
         - lambda: |-
+            // Initialize calibration variables
+            float hum_samples[2] = {0};
+            float res_samples[2] = {0};
+            float peak_humidity = 0;
+            float last_humidity = 0;
+            int humidity_decreasing_count = 0;
+
+            // Phase 0: Initial clean air snapshot
+            ESP_LOGI("bme680_cal", "Starting clean air snapshot");
             id(bme680_calibration_phase) = 0;
             id(bme680_clean_resistance) = id(bme680_gas_resistance).state;
             id(bme680_polluted_resistance) = 0;
             id(bme680_last_resistance) = id(bme680_gas_resistance).state;
             id(bme680_resistance_increasing_count) = 0;
 
-        # Phase 1: Clean air snapshot (30s)
-        - delay: 30s
-        - logger.log: "BME680 Calibration: Clean air snapshot complete, ready for IPA"
-        - lambda: |-
+            delay(30000);  // 30 second delay
+
+            // Phase 1: Initial humidity measurement
+            ESP_LOGI("bme680_cal", "Taking initial humidity measurement");
             id(bme680_calibration_phase) = 1;
             id(bme680_clean_resistance) = id(bme680_gas_resistance).state;
 
-        # Phase 2: IPA exposure (5m)
-        - delay: 5min
-        - logger.log: "BME680 Calibration: IPA exposure complete, waiting for minimum"
-        - lambda: |-
-            id(bme680_calibration_phase) = 2;
+            // Store first humidity point
+            float temp = id(bme680_temperature).state;
+            float rh = id(bme680_humidity).state;
+            float gas = id(bme680_gas_resistance).state;
 
-        # Phase 3: Wait for minimum value
-        - while:
-            condition:
-              lambda: |-
-                static float last_resistance = id(bme680_gas_resistance).state;
+            // Calculate absolute humidity
+            float temp_term = (17.62f * temp) / (243.12f + temp);
+            float svp = 6.112f * 100.0f * exp(temp_term);
+            float rho_max = svp / (461.52f * (temp + 273.15f));
+            float abs_hum = rh * 0.1f * rho_max;
+
+            hum_samples[0] = abs_hum;
+            res_samples[0] = log(gas);
+
+            ESP_LOGI("bme680_cal", "Initial humidity point - AH: %.1f g/m³, ln(R): %.3f", abs_hum, log(gas));
+            delay(5000);  // 5 second delay
+
+            // Phase 2: Request water spray
+            ESP_LOGI("bme680_cal", "Please spray water mist near sensor");
+            id(bme680_calibration_phase) = 2;
+            delay(30000);  // 30 second delay for spraying
+
+            // Phase 3: Track peak humidity
+            ESP_LOGI("bme680_cal", "Tracking maximum humidity");
+            id(bme680_calibration_phase) = 3;
+
+            // Initialize tracking with current reading
+            temp = id(bme680_temperature).state;
+            rh = id(bme680_humidity).state;
+            gas = id(bme680_gas_resistance).state;
+
+            temp_term = (17.62f * temp) / (243.12f + temp);
+            svp = 6.112f * 100.0f * exp(temp_term);
+            rho_max = svp / (461.52f * (temp + 273.15f));
+            abs_hum = rh * 0.1f * rho_max;
+
+            peak_humidity = abs_hum;
+            last_humidity = abs_hum;
+
+            ESP_LOGI("bme680_cal", "Starting humidity tracking - Initial AH: %.1f g/m³", abs_hum);
+
+            // Track peak humidity until it starts decreasing
+            while (humidity_decreasing_count < 4) {
+                delay(15000);  // 15 second delay between readings
+
+                temp = id(bme680_temperature).state;
+                rh = id(bme680_humidity).state;
+                gas = id(bme680_gas_resistance).state;
+
+                temp_term = (17.62f * temp) / (243.12f + temp);
+                svp = 6.112f * 100.0f * exp(temp_term);
+                rho_max = svp / (461.52f * (temp + 273.15f));
+                abs_hum = rh * 0.1f * rho_max;
+
+                if (abs_hum > peak_humidity) {
+                    peak_humidity = abs_hum;
+                    humidity_decreasing_count = 0;
+                    ESP_LOGI("bme680_cal", "New peak humidity: %.1f g/m³", peak_humidity);
+                }
+                else if (abs_hum < last_humidity) {
+                    humidity_decreasing_count++;
+                    ESP_LOGI("bme680_cal", "Humidity decreasing: %.1f g/m³ (count: %d)", abs_hum, humidity_decreasing_count);
+                } else {
+                    humidity_decreasing_count = 0;
+                }
+
+                last_humidity = abs_hum;
+            }
+
+            // Store second humidity point using peak value
+            hum_samples[1] = peak_humidity;
+            res_samples[1] = log(gas);
+
+            ESP_LOGI("bme680_cal", "Peak humidity point - AH: %.1f g/m³, ln(R): %.3f", peak_humidity, log(gas));
+
+            // Calculate ph_slope from the two points
+            float slope = (res_samples[1] - res_samples[0]) / (hum_samples[1] - hum_samples[0]);
+
+            // Update humidity slope with dampening
+            float old_slope = id(bme680_humidity_slope);
+            float new_slope = 0.7f * old_slope + 0.3f * slope;
+
+            // Sanity check on slope value
+            if (new_slope < -0.5f) new_slope = -0.5f;
+            if (new_slope > 0.0f) new_slope = -0.15f;  // If positive, use default
+
+            id(bme680_humidity_slope) = new_slope;
+
+            ESP_LOGI("bme680_cal", "Humidity calibration complete - Old slope: %.3f, New slope: %.3f",
+                     old_slope, new_slope);
+
+            // Phase 4: Wait for humidity dissipation
+            ESP_LOGI("bme680_cal", "Waiting for humidity to dissipate");
+            id(bme680_calibration_phase) = 4;
+            delay(120000);  // 120 second delay
+
+            // Phase 5: IPA exposure
+            ESP_LOGI("bme680_cal", "Ready for IPA exposure");
+            id(bme680_calibration_phase) = 5;
+            delay(300000);  // 5 minute delay
+            ESP_LOGI("bme680_cal", "IPA exposure complete");
+
+            // Phase 6: Wait for minimum value
+            id(bme680_calibration_phase) = 6;
+            float last_resistance = id(bme680_gas_resistance).state;
+            id(bme680_resistance_increasing_count) = 0;
+
+            while (id(bme680_resistance_increasing_count) < 4) {
+                delay(15000);  // 15 second delay between readings
+
                 float current_resistance = id(bme680_gas_resistance).state;
 
                 // Track lowest value
                 if (current_resistance < id(bme680_polluted_resistance) || id(bme680_polluted_resistance) == 0) {
-                  id(bme680_polluted_resistance) = current_resistance;
-                  id(bme680_resistance_increasing_count) = 0;
+                    id(bme680_polluted_resistance) = current_resistance;
+                    id(bme680_resistance_increasing_count) = 0;
                 }
                 // Check if increasing
                 else if (current_resistance > last_resistance) {
-                  id(bme680_resistance_increasing_count)++;
+                    id(bme680_resistance_increasing_count)++;
                 } else {
-                  id(bme680_resistance_increasing_count) = 0;
+                    id(bme680_resistance_increasing_count) = 0;
                 }
 
                 last_resistance = current_resistance;
-                return id(bme680_resistance_increasing_count) < 4;
-            then:
-              - delay: 15s
+            }
 
-        # Phase 4: Recovery phase
-        - logger.log: "BME680 Calibration: Minimum found, starting recovery"
-        - lambda: |-
-            id(bme680_calibration_phase) = 3;
+            // Phase 7: Recovery phase
+            ESP_LOGI("bme680_cal", "Minimum found, starting recovery");
+            id(bme680_calibration_phase) = 7;
 
-        # Wait for recovery with periodic checks
-        - while:
-            condition:
-              lambda: |-
-                float current = id(bme680_gas_resistance).state;
-                return current < id(bme680_clean_resistance) * 0.9;
-            then:
-              - logger.log:
-                  format: "BME680 Calibration: Still recovering... (current: %.1f, target: %.1f)"
-                  args: ['id(bme680_gas_resistance).state', 'id(bme680_clean_resistance) * 0.9']
-              - delay: 10min
+            while (id(bme680_gas_resistance).state < id(bme680_clean_resistance) * 0.9) {
+                ESP_LOGI("bme680_cal", "Still recovering... (current: %.1f, target: %.1f)",
+                         id(bme680_gas_resistance).state, id(bme680_clean_resistance) * 0.9);
+                delay(600000);  // 10 minute delay between checks
+            }
 
-        # Once we've reached clean air levels
-        - logger.log: "BME680 Calibration: Recovery complete, updating parameters"
-        - lambda: |-
-            float current = id(bme680_gas_resistance).state;
-            float abs_humidity = id(bme680_absolute_humidity).state;
-
-            // Update humidity compensation
-            float new_slope = (log(current / id(bme680_clean_resistance))) / abs_humidity;
-            float new_offset = log(current / id(bme680_clean_resistance)) - (new_slope * abs_humidity);
-
-            float param_alpha = 0.1;
-            id(bme680_humidity_slope) = (id(bme680_humidity_slope) * (1 - param_alpha)) + (new_slope * param_alpha);
-            id(bme680_humidity_offset) = (id(bme680_humidity_offset) * (1 - param_alpha)) + (new_offset * param_alpha);
-
-            // Mark calibration complete and record time
-            id(bme680_calibration_phase) = 4;
+            // Phase 8: Complete
+            ESP_LOGI("bme680_cal", "Recovery complete, calibration finished");
+            id(bme680_calibration_phase) = 8;
             id(bme680_last_calibration_time) = std::time(nullptr);
-        - switch.turn_off: bme680_calibration_mode
+            delay(5000);  // 5 second delay
+
+            // Turn off calibration mode
+            id(bme680_calibration_mode).publish_state(false);
 
     on_turn_off:
       then:

@@ -201,60 +201,89 @@ from https://github.com/thstielow/raspi-bme680-iaq, along with a bit of
 experimentation, to provide a much more reliable experience, including an
 integrated, guided calibration process.
 
-The calibration process involves 5 steps, which are triggered by turning on the
-"BME680 AQ Calibration" switch and then guided by the "BME680 AQ Calibration
-Status" text sensor value. To calibrate for normal VOCs, I recommend using
-Isopropyl Alcohol (IPA, Rubbing Alcohol) to simulate a VOC condition; any
-percentage should work, though I use 99% which I have anyways for cleaning
-various electronic components and such. To expose the sensor to it (step 3),
-I recommend pouring a small amount of the IPA onto the corner of a piece of
-paper towel, and then holding (or taping, etc.) the paper towel with the "wet"
-corner about 5-10cm away from the BME680 sensor. The paper towel provides a
-good surface for the volatile IPA to evaporate from and get into the sensor
-quickly, while also freeing you to walk away as desired.. Ensure you prepare
-your IPA right before step 3 and not any earlier, as the evaporating IPA from
-both the bottle and paper towel will throw off the readings if done early!
+The calibration process involves several steps with defined times between them,
+and you will need the following items to simulate both a higher humidity to
+calculate a humidity slope, and a simulated VOC to calibrate the sensor:
 
-1. Place the sensor in a known-clean (or as clean as possible) air environment;
-for instance, place it near an open window on a fresh air day, or next to an air
-purifier, etc., in a room without human occupation, for at least 60-90 minutes.
-This ensures we have a good baseline of what "clean air" is. Ideally, you will
-see the "BME680 Gas Resistance" value peak and level out around this time,
-forming a baseline "clean air" value.
+* A portable device (Phone, etc.) showing the Supersensor sensor details in
+  Homeassistant to track the progress.
+* A spray mister containing clean water (tap or distilled).
+* Isopropyl Alcohol (IPA, rubbing alcohol), between 70% and 99%.
+* A piece of paper towel and possibly tape to hold it.
 
-2. Enable the "BME680 IAQ Calibration" switch. Observe the calibration status
-closely, as the initial clean air sampling phase lasts for only 30 seconds; use
-this time to prepare your IPA source, though keep it away from the sensor until
-prompted as mentioned above.
+Note that you must prepare and work fast while following the directions from
+the "BME680 AQ Calibration Status" sensor during calibration.
 
-3. Expose the sensor to the IPA for ~5 minutes when prompted. If using the paper
-towel method, hold the "wet" corner between 5 and 10cm away from the sensor
-for the duration of this step.
+1. Place the sensor in a known-clean (or as clean as possible) air environment.
 
-4. Remove the IPA when prompted; if you run a little over at this time, that is
-fine, and longer exposure times will simply lower the baseline for "bad" air
-further. The sensor will continue calibrating, waiting for the lowest gas
-resistance value before continuing. Once you remove the IPA it is best to now
-leave the area (taking the IPA with you) to avoid incidental contamination both
-by the IPA and your breath CO2 during the recovery phase.
+   If possible, place the sensor in an open room without human habitation, near
+   an open window or air purifier, and leave it there for at least 30 minutes
+   without disturbing it.
 
-5. Once a minimum value has been reached, the sensor will begin calibrating the
-return to the original "clean air" value, within 10%, waiting in 10 minute
-intervals. This process may take up to 2 hours, and it is very important not to
-disturb the calibration during this time by reentering the room, power-cycling
-the Supersensor, or otherwise interfering with it in any way. If the sensor
-becomes "stuck" in this phase for longer than 3-4 hours, and the gas resistance
-is clearly plateauing well below the original clean air threshold, then your
-calibration is invalid. Stop it by turning off the switch, waiting for the
-levels to truly normalize, and then trying again from the start; unfortunately
-this happens occasionally due to the fickle nature of the BME680.
+2. When ready, before re-entering the area of the sensor, activate the "BME680
+IAQ Calibration" switch.
 
-6. Once equilibrium has bee reached, the sensor will report "Calibrated", the
-date and time will be logged in the "BME680 AQ Last Calibration" sensor, and
-the calibration switch will turn off. Your sensor has now saved the calibration
-values to NVRAM and is ready to report actual IAQ values within the detected
-range. You may test it by bringing some IPA close to the sensor again and
-observing how the AQ value falls.
+   This will immediately take the "clean air" reading, and you will have 30s
+   before the next stage.
+
+   The calibration status sensor will show `Clean Air Snapshot (30s)` when
+   ready to proceed.
+
+3. Prepare your mist bottle for spraying while the sensor captures its initial
+humidity reading.
+
+   The calibration status sensor will briefly show `Capturing Initial Humidity`
+   and then `Spray Water Mist Near Sensor (30s)` when ready to proceed.
+
+3. Spray a mist of water about 15cm in front of the sensor. Take care not to
+directly spray the sensor; spray perpendicular to it.
+
+   You will have 30s to do this, after which the sensor will begin capturing
+   the humidity value.
+
+   The calibration sensor will show `Wait for Maximum Humidity` when ready to
+   proceed.
+
+4. Wait for the maximum humidity to be captured and subsequently dissapate.
+
+   The calibration status sensor will show `Wait for Humitity to Dissipate
+   (120s)` when ready to proceed.
+
+5. Prepare your IPA paper towel by blotting a small amount of IPA onto a corner
+of the paper towel; do this only after "Wait for Humidity to Dissipate (120s)"
+is being shown.
+
+    The calibration sensor will show `Expose Sensor to IPA (300s)` when ready
+    to proceed.
+
+6. Place your IPA-containing paper towel about 5-10cm below and in front of the
+BME680 sensor and leave it there for 5 minutes until prompted; taping it to
+the wall, cord, etc. might be helpful here.
+
+    The calibration sensor will show `Wait for Minimum Gas Resistance` when
+    ready to proceed.
+
+7. Remove the IPA-containing paper towel and exit the room with it. The manual
+portion of the calibration is now done.
+
+    The calibration sensor will show `Wait for Return to Baseline` when ready
+    to proceed.
+
+8. It is now important not to disturb the sensor for at least 1-2 hours while
+the IPA fumes dissipate and it recovers back to the baseline clean air level.
+This includes not re-entering the room or otherwise adjusting the Supersensor
+(e.g. powercycling it or moving it).
+
+    The calibration sensor will show `Calibration Completed and Saved` when
+    ready to proceed.
+
+9. The sensor is now calibrated and the "BME680 AQ Last Calibration" sensor
+will update to show the current time. You can now re-enter the room.
+
+If the calibration becomes "stuck" during step 8 for more than 3-4 hours, you
+may have a bad calibration; this just happens sometimes. Cancel the calibration
+by disabling the switch, wait some more time for the "BME680 Current Gas
+Resistance" sensor to normalize and level out, and then try again.
 
 For added benefit, several diagnostic category sensors are provided to show the
 values obtained from the last calibration. You can use these to see how close
