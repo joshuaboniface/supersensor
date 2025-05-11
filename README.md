@@ -1,4 +1,4 @@
-# SuperSensor
+# SuperSensor v1.x
 
 SuperSensor is an all-in-one voice, motion, presence, temperature/humidity/
 pressure, and light sensor, built on an ESP32 with ESPHome, and inspired
@@ -33,6 +33,8 @@ Note: Once programmed, the output LED will flash continuously until connected
       to disable this functionality.
 
 For more details, please [see my blog post on the SuperSensor project](https://www.boniface.me/the-supersensor/).
+
+**NOTICE: This is the previous version of the SuperSensor, v1.x. This has been superceded by [version 2.x](https://github.com/joshuaboniface/supersensor/tree/v2.x), which features numerous improvements in the PCB design, components, and code functionality. Use this code only if you are running the previous revision of the board; new users should see the updated link above and the [current version of the blog post](https://www.boniface.me/the-supersensor-2.0/).**
 
 ## Parts List
 
