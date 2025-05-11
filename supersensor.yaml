@@ -53,7 +53,7 @@ esphome:
               - switch.turn_on: voice_support_active
 
 dashboard_import:
-  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml
+  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml@v1.x
 
 esp32:
   board: esp32dev
