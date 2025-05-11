@@ -371,16 +371,15 @@ interval:
             App.safe_reboot();
           }
 
-# Add optional microWakeWord support (on-device wake word)
-# Doesn't work well as of 2024-07-04 so leave disabled
-#micro_wake_word:
-#  model: hey_jarvis
-#  on_wake_word_detected:
-#    then:
-#      - voice_assistant.start:
-#          wake_word: !lambda return wake_word;
+micro_wake_word:
+  vad:
+  models:
+    - model: hey_jarvis
+  on_wake_word_detected:
+    then:
+      - voice_assistant.start:
+          wake_word: !lambda return wake_word;
 
-# Include the Espressif Audio Development Framework for VAD support
 esp_adf:
 external_components:
   - source: github://pr#5230
