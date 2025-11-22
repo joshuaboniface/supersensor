@@ -1,7 +1,7 @@
 ---
 
 ###############################################################################
-# SuperSensor v2.0 ESPHome configuration
+# SuperSensor v3.0 ESPHome configuration
 ###############################################################################
 #
 #    Copyright (C) 2025 Joshua M. Boniface <joshua@boniface.me>
@@ -26,7 +26,7 @@ esphome:
   friendly_name: "Supersensor"
   project:
     name: joshuaboniface.supersensor
-    version: "2.0"
+    version: "3.0"
   min_version: 2026.3.0
   on_boot:
     - priority: 600
@@ -59,23 +59,19 @@ preferences:
   flash_write_interval: 15sec
 
 dashboard_import:
-  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml@v2.x
+  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml@v3.x
 
 esp32:
-  board: esp32dev
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHz
   framework:
     type: esp-idf
-    sdkconfig_options:
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32_DATA_CACHE_LINE_64B: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ: "240"
-      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
-      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
-      CONFIG_SPIRAM_CACHE_WORKAROUND: "y"
-      CONFIG_OPTIMIZATION_LEVEL_RELEASE: "y"
+
+psram:
+  # We use an ESP32-S3-N8R2 as reference
+  mode: quad
+  speed: 80MHz
 
 globals:
   #
@@ -84,7 +80,7 @@ globals:
   - id: temperature_offset
     type: float
     restore_value: true
-    initial_value: "-5.0"  # Defaults to -5 due to heating from the ESP
+    initial_value: "-2.0"
 
   - id: humidity_offset
     type: float
@@ -528,6 +524,10 @@ interval:
 logger:
   level: DEBUG
   baud_rate: 115200
+  # Log to COM output USB port
+  hardware_uart: UART0
+  # Ensure boot logs are captured when opening the port
+  deassert_rts_dtr: true
 
 api:
   reboot_timeout: 15min
@@ -562,52 +562,52 @@ debug:
 
 uart:
   id: ld2410_uart
-  rx_pin: GPIO19
-  tx_pin: GPIO18
+  rx_pin: GPIO18
+  tx_pin: GPIO17
   baud_rate: 256000
   data_bits: 8
   stop_bits: 1
   parity: NONE
 
 i2c:
-  sda: GPIO27
-  scl: GPIO26
+  sda: GPIO35
+  scl: GPIO36
   scan: true
 
 i2s_audio:
   - id: i2s_input
     i2s_lrclk_pin:
-      number: GPIO17 # WS
+      number: GPIO5      # WS
     i2s_bclk_pin:
-      number: GPIO16  # SCK
-#  # Dummy I2S audio pipeline for "speaker"
-#  - id: i2s_dummy
-#    i2s_lrclk_pin:
-#      number: GPIO15 # WS
-#      ignore_strapping_warning: true  # This isn't connected to anything anyways
-#    i2s_bclk_pin:
-#      number: GPIO14  # SCK
+      number: GPIO6      # SCK
+
+  # Dummy I2S audio pipeline for "speaker"
+  - id: i2s_dummy
+    i2s_lrclk_pin:
+      number: GPIO12     # WS
+    i2s_bclk_pin:
+      number: GPIO14     # SCK
 
 microphone:
   - platform: i2s_audio
     id: mic
     i2s_audio_id: i2s_input
-    i2s_din_pin: GPIO4 # SD
+    i2s_din_pin: GPIO4   # SD
     adc_type: external
     pdm: false
     channel: left
 
-#speaker:
-#  # Dummy speaker to fix home-assistant/core#142363
-#  - platform: i2s_audio
-#    id: dummy_speaker
-#    i2s_audio_id: i2s_dummy
-#    i2s_dout_pin: GPIO25
-#    dac_type: external
-#    bits_per_sample: 16bit
-#    sample_rate: 16000
-#    channel: mono #mono will have bad performance, however, we are not using the on device speaker
-#    buffer_duration: 60ms
+speaker:
+  # Dummy speaker to fix home-assistant/core#142363
+  - platform: i2s_audio
+    id: dummy_speaker
+    i2s_audio_id: i2s_dummy
+    i2s_dout_pin: GPIO13
+    dac_type: external
+    bits_per_sample: 16bit
+    sample_rate: 16000
+    channel: mono
+    buffer_duration: 60ms
 
 micro_wake_word:
   id: mww
@@ -646,7 +646,7 @@ micro_wake_word:
 voice_assistant:
   id: va
   microphone: mic
-#  speaker: dummy_speaker
+  speaker: dummy_speaker
   micro_wake_word: mww
   use_wake_word: false
   noise_suppression_level: 3
@@ -716,13 +716,13 @@ light:
 output:
   - platform: ledc
     id: rgb_r
-    pin: GPIO23
+    pin: GPIO39
   - platform: ledc
     id: rgb_g
-    pin: GPIO22
+    pin: GPIO40
   - platform: ledc
     id: rgb_b
-    pin: GPIO21
+    pin: GPIO41
 
 ld2410:
   id: ld2410_radar
@@ -764,6 +764,8 @@ sensor:
       name: "ESP32 Heap Free"
     block:
       name: "ESP32 Heap Max Block"
+    psram:
+      name: "ESP32 PSRAM Free"
     loop_time:
       name: "ESP32 Loop Time"
     cpu_frequency:
@@ -840,7 +842,7 @@ sensor:
       filters:
         - offset: !lambda return id(temperature_offset);
         - sliding_window_moving_average:
-            window_size: 20
+            window_size: 4
             send_every: 1
     humidity:
       name: "SHT45 Relative Humidity"
@@ -863,7 +865,7 @@ sensor:
             return rh_corr;
         - offset: !lambda return id(humidity_offset);
         - sliding_window_moving_average:
-            window_size: 20
+            window_size: 4
             send_every: 1
     heater_max_duty: 0.0
     update_interval: 15s
@@ -1050,7 +1052,7 @@ binary_sensor:
     name: "PIR GPIO"
     id: pir_gpio
     pin:
-      number: GPIO32
+      number: GPIO8
       mode:
         input: true
         pulldown: true
