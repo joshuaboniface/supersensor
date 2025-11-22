@@ -59,7 +59,7 @@ preferences:
   flash_write_interval: 15sec
 
 dashboard_import:
-  package_import_url: github://joshuaboniface/supersensor2/supersensor.yaml
+  package_import_url: github://joshuaboniface/supersensor/supersensor.yaml@v2.x
 
 esp32:
   board: esp32dev
