@@ -1,6 +1,6 @@
 # SuperSensor v1.x
 
-**NOTICE: This is the previous version of the SuperSensor, v1.x. This has been superceded by [version 2.x](https://github.com/joshuaboniface/supersensor2), which features numerous improvements in the PCB design, components, and code functionality. Use this code only if you are running the previous revision of the board; new users should see the updated link above and the [current version of the blog post](https://www.boniface.me/posts/the-supersensor-2.0/).**
+**NOTICE: This is the previous version of the SuperSensor, v1.x. This has been superceded by [version 2.x](https://github.com/joshuaboniface/supersensor@v2.x) and [version 3.x](https://github.com/joshuaboniface/supersensor@v3.x), which feature numerous improvements in the PCB design, components, and code functionality. Use this code only if you are running the previous revision of the board; new users should see the updated links above and the [current versions](https://www.boniface.me/posts/the-supersensor-2.0/) [of the blog post](https://www.boniface.me/posts/the-supersensor-3.0/).**
 
 SuperSensor is an all-in-one voice, motion, presence, temperature/humidity/
 pressure, and light sensor, built on an ESP32 with ESPHome, and inspired
