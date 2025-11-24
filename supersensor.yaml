@@ -949,6 +949,7 @@ text_sensor:
     lambda: |-
       float score = id(room_health_score).state;
       if (score < 0) return {"Unknown"};
+      else if (score >= 100.0) return {"Excellent"};
       else if (score >= 95.0) return {"Great"};
       else if (score >= 90.0) return {"Good"};
       else if (score >= 80.0) return {"Fair"};
