@@ -164,34 +164,149 @@ globals:
     restore_value: yes
     initial_value: '"mww_computer"'
 
-  - id: light_is_holding
-    type: bool
+  # LED State Machine (priority-based)
+  - id: led_state
+    type: int
     restore_value: no
-    initial_value: 'false'
+    initial_value: '0'      # 0=idle, 1=hold, 2=pipeline
+
+  - id: led_substate
+    type: int
+    restore_value: no
+    initial_value: '0'      # 0 idle, 1 listen, 2 stt, 3 success, 4 fail
+
+  - id: led_hold_until
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
 
 script:
-  - id: light_off
+  # LED State Machine (priority-based)
+  #
+  #  Idle -> VA Listening -> VA STT -> VA Responding -> 5s --|
+  #  0,0     2,1             2,2       1,3/4            |    |
+  #  ^       ^                                          v    |
+  #  |       |------------------------------------------+    v
+  #  --------------------------------------------------------+
+  # 
+  # Main entrypoint:
+  - id: led_start
+    mode: queued
     then:
       - if:
           condition:
-            lambda: 'return !id(light_is_holding);'
+            lambda: 'return id(led_state)<2;'
+          then:
+            # If we're in idle or holding state, just re-render (triggered by holds themselves and idle LED updates)
+            - script.execute: led_render
+          else:
+            # If we're in pipeline state, stop any existing holds and clear them, then re-render
+            - script.stop: led_hold_timer
+            - script.execute: led_clear_hold
+            - script.execute: led_render
+
+  - id: led_hold_timer
+    mode: restart
+    then:
+      # Hold execution; delay for 5s, then clear the hold and re-render
+      - delay: 5s
+      - script.execute: led_clear_hold
+      - script.execute: led_render
+
+  - id: led_clear_hold
+    then:
+      # Clear an existing hold state if applicable
+      - lambda: |-
+          if (id(led_state)==1) {
+            id(led_state)=0;
+            id(led_substate)=0;
+          }
+
+  - id: led_render
+    then:
+      # Render LED colours based on current state and substate
+      - if:
+          condition:
+            lambda: 'return id(led_state)==2 && id(led_substate)==1;'
+          then:
+            - script.execute: led_blue
+      - if:
+          condition:
+            lambda: 'return id(led_state)==2 && id(led_substate)==2;'
+          then:
+            - script.execute: led_cyan
+      - if:
+          condition:
+            lambda: 'return id(led_state)==1 && id(led_substate)==3;'
+          then:
+            - script.execute: led_green
+      - if:
+          condition:
+            lambda: 'return id(led_state)==1 && id(led_substate)==4;'
+          then:
+            - script.execute: led_red
+      - if:
+          condition:
+            lambda: 'return id(led_state)==0;'
           then:
             - if:
                 condition:
                   - binary_sensor.is_on: supersensor_occupancy
                   - switch.is_on: enable_presence_led
                 then:
-                  - light.turn_on:
-                      id: output_led
-                      brightness: 25%
-                      red: 1
-                      green: 1
-                      blue: 1
-                      transition_length: 1s
+                  - script.execute: led_dim_white
                 else:
-                  - light.turn_off:
-                      id: output_led
-                      transition_length: 1s
+                  - script.execute: led_off
+
+  - id: led_blue
+    then:
+      - light.turn_on:
+          id: output_led
+          red: 0
+          green: 0
+          blue: 1
+          brightness: 100%
+
+  - id: led_cyan
+    then:
+      - light.turn_on:
+          id: output_led
+          red: 0
+          green: 1
+          blue: 1
+          brightness: 75%
+
+  - id: led_green
+    then:
+      - light.turn_on:
+          id: output_led
+          red: 0
+          green: 1
+          blue: 0
+          brightness: 100%
+
+  - id: led_red
+    then:
+      - light.turn_on:
+          id: output_led
+          red: 1
+          green: 0
+          blue: 0
+          brightness: 100%
+
+  - id: led_dim_white
+    then:
+      - light.turn_on:
+          id: output_led
+          red: 1
+          green: 1
+          blue: 1
+          brightness: 25%
+
+  - id: led_off
+    then:
+      - light.turn_off:
+          id: output_led
 
   - id: pir_handler
     then:
@@ -476,28 +591,16 @@ voice_assistant:
   volume_multiplier: 4
   on_wake_word_detected:
     - logger.log: "Wake word detected in VA pipeline"
-    - light.turn_on:
-        id: output_led
-        brightness: 100%
-        red: 0
-        green: 0
-        blue: 1
   on_listening:
     - logger.log: "Listening for commands"
-    - light.turn_on:
-        id: output_led
-        brightness: 100%
-        red: 0
-        green: 0
-        blue: 1
+    # Trigger LED state - pipeline, listen
+    - lambda: 'id(led_state)=2; id(led_substate)=1;'
+    - script.execute: led_start
   on_stt_vad_end:
     - logger.log: "Processing STT result"
-    - light.turn_on:
-        id: output_led
-        brightness: 75%
-        red: 0
-        green: 1
-        blue: 1
+    # Trigger LED state - pipeline, stt
+    - lambda: 'id(led_state)=2; id(led_substate)=2;'
+    - script.execute: led_start
   on_tts_start:
     - if:
         condition:
@@ -506,23 +609,17 @@ voice_assistant:
             return x.rfind("Sorry", 0) == 0;
         then:
           - logger.log: "Command failed!"
-          - light.turn_on:
-              id: output_led
-              effect: hold
-              brightness: 100%
-              red: 1
-              green: 0
-              blue: 0
+          # Trigger LED state - hold, failure
+          - lambda: 'id(led_state)=1; id(led_substate)=4;'
+          - script.execute: led_start
+          - script.execute: led_hold_timer
           - voice_assistant.stop:
         else:
           - logger.log: "Command successful!"
-          - light.turn_on:
-              id: output_led
-              effect: hold
-              brightness: 100%
-              red: 0
-              green: 1
-              blue: 0
+          # Trigger LED state - hold, success
+          - lambda: 'id(led_state)=1; id(led_substate)=3;'
+          - script.execute: led_start
+          - script.execute: led_hold_timer
           - voice_assistant.stop:
   on_tts_end:
     - logger.log: "Finished STT result"
@@ -548,17 +645,6 @@ light:
               duration: 0.5s
             - state: false
               duration: 0.5s
-      - automation:
-          name: hold
-          sequence:
-            - globals.set:
-                id: light_is_holding
-                value: "true"
-            - delay: 5s
-            - globals.set:
-                id: light_is_holding
-                value: "false"
-            - script.execute: light_off
 
 output:
   - platform: ledc
@@ -851,7 +937,8 @@ binary_sensor:
     device_class: occupancy
     on_state:
       then:
-        - script.execute: light_off
+          # Trigger LED state - do not change existing state or substate
+        - script.execute: led_start
 
   - platform: gpio
     name: "PIR GPIO"
@@ -999,9 +1086,11 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
     on_turn_on:
-      - script.execute: light_off
+      # Trigger LED state - do not change existing state or substate
+      - script.execute: led_start
     on_turn_off:
-      - script.execute: light_off
+      # Trigger LED state - do not change existing state or substate
+      - script.execute: led_start
 
   - platform: ld2410
     engineering_mode:
