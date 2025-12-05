@@ -78,17 +78,22 @@ esp32:
       CONFIG_OPTIMIZATION_LEVEL_RELEASE: "y"
 
 globals:
-  # Defaults to -5 due to heating from the ESP
+  #
+  # SHT45 offsets
+  #
   - id: temperature_offset
     type: float
     restore_value: true
-    initial_value: "-5.0"
+    initial_value: "-5.0"  # Defaults to -5 due to heating from the ESP
 
   - id: humidity_offset
     type: float
     restore_value: true
     initial_value: "0.0"
 
+  #
+  # Room Health settings
+  #
   - id: room_health_temperature_min
     type: float
     restore_value: true
@@ -134,16 +139,25 @@ globals:
     restore_value: true
     initial_value: "0.3"
 
+  #
+  # PIR settings
+  #
   - id: pir_hold_time
     type: int
     restore_value: true
     initial_value: "15"
 
+  #
+  # Light settings
+  #
   - id: light_presence_threshold
     type: int
     restore_value: true
     initial_value: "30"
 
+  #
+  # Occupancy settings
+  #
   - id: occupancy_detect_mode
     type: int
     restore_value: true
@@ -154,17 +168,48 @@ globals:
     restore_value: true
     initial_value: "0"
 
+  #
+  # API connection tracker
+  #
   - id: last_api_connected_time
     type: uint32_t
     restore_value: no
     initial_value: "0"
 
+  #
+  # Wake Word settings
+  #
   - id: current_wake_word
     type: std::string
     restore_value: yes
     initial_value: '"mww_computer"'
 
+  #
+  # LED Brightness settings
+  #
+  - id: led_presence_brightness
+    type: int
+    restore_value: yes
+    initial_value: '25'
+
+  - id: led_listening_brightness
+    type: int
+    restore_value: yes
+    initial_value: '100'
+
+  - id: led_processing_brightness
+    type: int
+    restore_value: yes
+    initial_value: '75'
+
+  - id: led_responding_brightness
+    type: int
+    restore_value: yes
+    initial_value: '100'
+
+  #
   # LED State Machine (priority-based)
+  #
   - id: led_state
     type: int
     restore_value: no
@@ -181,6 +226,7 @@ globals:
     initial_value: '0'
 
 script:
+  #
   # LED State Machine (priority-based)
   #
   #  Idle -> VA Listening -> VA STT -> VA Responding -> 5s --|
@@ -189,7 +235,6 @@ script:
   #  |       |------------------------------------------+    v
   #  --------------------------------------------------------+
   # 
-  # Main entrypoint:
   - id: led_start
     mode: queued
     then:
@@ -265,7 +310,7 @@ script:
           red: 0
           green: 0
           blue: 1
-          brightness: 100%
+          brightness: !lambda 'return id(led_listening_brightness);'
 
   - id: led_cyan
     then:
@@ -274,7 +319,7 @@ script:
           red: 0
           green: 1
           blue: 1
-          brightness: 75%
+          brightness: !lambda 'return id(led_processing_brightness);'
 
   - id: led_green
     then:
@@ -283,7 +328,7 @@ script:
           red: 0
           green: 1
           blue: 0
-          brightness: 100%
+          brightness: !lambda 'return id(led_responding_brightness);'
 
   - id: led_red
     then:
@@ -292,7 +337,7 @@ script:
           red: 1
           green: 0
           blue: 0
-          brightness: 100%
+          brightness: !lambda 'return id(led_responding_brightness);'
 
   - id: led_dim_white
     then:
@@ -301,13 +346,16 @@ script:
           red: 1
           green: 1
           blue: 1
-          brightness: 25%
+          brightness: !lambda 'return id(led_presence_brightness);'
 
   - id: led_off
     then:
       - light.turn_off:
           id: output_led
 
+  #
+  # Occupancy handlers
+  #
   - id: pir_handler
     then:
       - lambda: |-
@@ -1311,6 +1359,64 @@ number:
             - logger.log:
                 format: "Rejected Humidity weight %.2f (total would be out of range: must be > 0.0 and ≤ 1.0)"
                 args: [ 'x' ]
+
+  # LED Output brightness values
+  # Controls the brightness of the LEDs through the various operations
+  - platform: template
+    name: "LED Brightness %: Presence"
+    id: led_presence_brightness_setter
+    min_value: 0
+    max_value: 100
+    step: 5
+    lambda: |-
+      return id(led_presence_brightness);
+    set_action:
+      then:
+        - globals.set:
+            id: led_presence_brightness
+            value: !lambda 'return int(x);'
+
+  - platform: template
+    name: "LED Brightness %: Listening"
+    id: led_listening_brightness_setter
+    min_value: 0
+    max_value: 100
+    step: 5
+    lambda: |-
+      return id(led_listening_brightness);
+    set_action:
+      then:
+        - globals.set:
+            id: led_listening_brightness
+            value: !lambda 'return int(x);'
+
+  - platform: template
+    name: "LED Brightness %: Processing"
+    id: led_processing_brightness_setter
+    min_value: 0
+    max_value: 100
+    step: 5
+    lambda: |-
+      return id(led_processing_brightness);
+    set_action:
+      then:
+        - globals.set:
+            id: led_processing_brightness
+            value: !lambda 'return int(x);'
+
+  - platform: template
+    name: "LED Brightness %: Responding"
+    id: led_responding_brightness_setter
+    min_value: 0
+    max_value: 100
+    step: 5
+    lambda: |-
+      return id(led_responding_brightness);
+    set_action:
+      then:
+        - globals.set:
+            id: led_responding_brightness
+            value: !lambda 'return int(x);'
 
   # LD2410c configuration values
   - platform: ld2410
