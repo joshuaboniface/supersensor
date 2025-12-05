@@ -310,7 +310,7 @@ script:
           red: 0
           green: 0
           blue: 1
-          brightness: !lambda 'return id(led_listening_brightness);'
+          brightness: !lambda 'return id(led_listening_brightness) / 100.0;'
 
   - id: led_cyan
     then:
@@ -319,7 +319,7 @@ script:
           red: 0
           green: 1
           blue: 1
-          brightness: !lambda 'return id(led_processing_brightness);'
+          brightness: !lambda 'return id(led_processing_brightness) / 100.0;'
 
   - id: led_green
     then:
@@ -328,7 +328,7 @@ script:
           red: 0
           green: 1
           blue: 0
-          brightness: !lambda 'return id(led_responding_brightness);'
+          brightness: !lambda 'return id(led_responding_brightness) / 100.0;'
 
   - id: led_red
     then:
@@ -337,7 +337,7 @@ script:
           red: 1
           green: 0
           blue: 0
-          brightness: !lambda 'return id(led_responding_brightness);'
+          brightness: !lambda 'return id(led_responding_brightness) / 100.0;'
 
   - id: led_dim_white
     then:
@@ -346,7 +346,7 @@ script:
           red: 1
           green: 1
           blue: 1
-          brightness: !lambda 'return id(led_presence_brightness);'
+          brightness: !lambda 'return id(led_presence_brightness) / 100.0;'
 
   - id: led_off
     then:
@@ -1375,6 +1375,8 @@ number:
         - globals.set:
             id: led_presence_brightness
             value: !lambda 'return int(x);'
+        # Trigger LED state - do not change existing state or substate
+        - script.execute: led_start
 
   - platform: template
     name: "LED Brightness %: Listening"
@@ -1389,6 +1391,8 @@ number:
         - globals.set:
             id: led_listening_brightness
             value: !lambda 'return int(x);'
+        # Trigger LED state - do not change existing state or substate
+        - script.execute: led_start
 
   - platform: template
     name: "LED Brightness %: Processing"
@@ -1403,6 +1407,8 @@ number:
         - globals.set:
             id: led_processing_brightness
             value: !lambda 'return int(x);'
+        # Trigger LED state - do not change existing state or substate
+        - script.execute: led_start
 
   - platform: template
     name: "LED Brightness %: Responding"
@@ -1417,6 +1423,8 @@ number:
         - globals.set:
             id: led_responding_brightness
             value: !lambda 'return int(x);'
+        # Trigger LED state - do not change existing state or substate
+        - script.execute: led_start
 
   # LD2410c configuration values
   - platform: ld2410
