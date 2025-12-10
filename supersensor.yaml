@@ -981,47 +981,47 @@ sensor:
       move_energy:
         name: "LD2410C G0 Move Energy"
       still_energy:
-        name: "LD2410C G0 still energy"
+        name: "LD2410C G0 Still Energy"
     g1:
       move_energy:
-        name: "LD2410C G1 move energy"
+        name: "LD2410C G1 Move Energy"
       still_energy:
-        name: "LD2410C G1 still energy"
+        name: "LD2410C G1 Still Energy"
     g2:
       move_energy:
-        name: "LD2410C G2 move energy"
+        name: "LD2410C G2 Move Energy"
       still_energy:
-        name: "LD2410C G2 still energy"
+        name: "LD2410C G2 Still Energy"
     g3:
       move_energy:
-        name: "LD2410C G3 move energy"
+        name: "LD2410C G3 Move Energy"
       still_energy:
-        name: "LD2410C G3 still energy"
+        name: "LD2410C G3 Still Energy"
     g4:
       move_energy:
-        name: "LD2410C G4 move energy"
+        name: "LD2410C G4 Move Energy"
       still_energy:
-        name: "LD2410C G4 still energy"
+        name: "LD2410C G4 Still Energy"
     g5:
       move_energy:
-        name: "LD2410C G5 move energy"
+        name: "LD2410C G5 Move Energy"
       still_energy:
-        name: "LD2410C G5 still energy"
+        name: "LD2410C G5 Still Energy"
     g6:
       move_energy:
-        name: "LD2410C G6 move energy"
+        name: "LD2410C G6 Move Energy"
       still_energy:
-        name: "LD2410C G6 still energy"
+        name: "LD2410C G6 Still Energy"
     g7:
       move_energy:
-        name: "LD2410C G7 move energy"
+        name: "LD2410C G7 Move Energy"
       still_energy:
-        name: "LD2410C G7 still energy"
+        name: "LD2410C G7 Still Energy"
     g8:
       move_energy:
-        name: "LD2410C G8 move energy"
+        name: "LD2410C G8 Move Energy"
       still_energy:
-        name: "LD2410C G8 still energy"
+        name: "LD2410C G8 Still Energy"
 
 binary_sensor:
   - platform: template
