@@ -980,48 +980,66 @@ sensor:
     g0:
       move_energy:
         name: "LD2410C G0 Move Energy"
+        id: ld2410c_gate0_move_energy
       still_energy:
         name: "LD2410C G0 Still Energy"
+        id: ld2410c_gate0_still_energy
     g1:
       move_energy:
         name: "LD2410C G1 Move Energy"
+        id: ld2410c_gate1_move_energy
       still_energy:
         name: "LD2410C G1 Still Energy"
+        id: ld2410c_gate1_still_energy
     g2:
       move_energy:
         name: "LD2410C G2 Move Energy"
+        id: ld2410c_gate2_move_energy
       still_energy:
         name: "LD2410C G2 Still Energy"
+        id: ld2410c_gate2_still_energy
     g3:
       move_energy:
         name: "LD2410C G3 Move Energy"
+        id: ld2410c_gate3_move_energy
       still_energy:
         name: "LD2410C G3 Still Energy"
+        id: ld2410c_gate3_still_energy
     g4:
       move_energy:
         name: "LD2410C G4 Move Energy"
+        id: ld2410c_gate4_move_energy
       still_energy:
         name: "LD2410C G4 Still Energy"
+        id: ld2410c_gate4_still_energy
     g5:
       move_energy:
         name: "LD2410C G5 Move Energy"
+        id: ld2410c_gate5_move_energy
       still_energy:
         name: "LD2410C G5 Still Energy"
+        id: ld2410c_gate5_still_energy
     g6:
       move_energy:
         name: "LD2410C G6 Move Energy"
+        id: ld2410c_gate6_move_energy
       still_energy:
         name: "LD2410C G6 Still Energy"
+        id: ld2410c_gate6_still_energy
     g7:
       move_energy:
         name: "LD2410C G7 Move Energy"
+        id: ld2410c_gate7_move_energy
       still_energy:
         name: "LD2410C G7 Still Energy"
+        id: ld2410c_gate7_still_energy
     g8:
       move_energy:
         name: "LD2410C G8 Move Energy"
+        id: ld2410c_gate8_move_energy
       still_energy:
         name: "LD2410C G8 Still Energy"
+        id: ld2410c_gate8_still_energy
 
 binary_sensor:
   - platform: template
@@ -1525,48 +1543,66 @@ number:
     g0:
       move_threshold:
         name: "LD2410C G0 Move Threshold"
+        id: ld2410c_gate0_move_threshold
       still_threshold:
         name: "LD2410C G0 Still Threshold"
+        id: ld2410c_gate0_still_threshold
     g1:
       move_threshold:
         name: "LD2410C G1 Move Threshold"
+        id: ld2410c_gate1_move_threshold
       still_threshold:
         name: "LD2410C G1 Still Threshold"
+        id: ld2410c_gate1_still_threshold
     g2:
       move_threshold:
         name: "LD2410C G2 Move Threshold"
+        id: ld2410c_gate2_move_threshold
       still_threshold:
         name: "LD2410C G2 Still Threshold"
+        id: ld2410c_gate2_still_threshold
     g3:
       move_threshold:
         name: "LD2410C G3 Move Threshold"
+        id: ld2410c_gate3_move_threshold
       still_threshold:
         name: "LD2410C G3 Still Threshold"
+        id: ld2410c_gate3_still_threshold
     g4:
       move_threshold:
         name: "LD2410C G4 Move Threshold"
+        id: ld2410c_gate4_move_threshold
       still_threshold:
         name: "LD2410C G4 Still Threshold"
+        id: ld2410c_gate4_still_threshold
     g5:
       move_threshold:
         name: "LD2410C G5 Move Threshold"
+        id: ld2410c_gate5_move_threshold
       still_threshold:
         name: "LD2410C G5 Still Threshold"
+        id: ld2410c_gate5_still_threshold
     g6:
       move_threshold:
         name: "LD2410C G6 Move Threshold"
+        id: ld2410c_gate6_move_threshold
       still_threshold:
         name: "LD2410C G6 Still Threshold"
+        id: ld2410c_gate6_still_threshold
     g7:
       move_threshold:
         name: "LD2410C G7 Move Threshold"
+        id: ld2410c_gate7_move_threshold
       still_threshold:
         name: "LD2410C G7 Still Threshold"
+        id: ld2410c_gate7_still_threshold
     g8:
       move_threshold:
         name: "LD2410C G8 Move Threshold"
+        id: ld2410c_gate8_move_threshold
       still_threshold:
         name: "LD2410C G8 Still Threshold"
+        id: ld2410c_gate8_still_threshold
 
 select:
   # Occupancy Detect Mode:
