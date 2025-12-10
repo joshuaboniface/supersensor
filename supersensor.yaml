@@ -1524,49 +1524,49 @@ number:
       name: "LD2410C Max Still Distance Gate"
     g0:
       move_threshold:
-        name: "LD2410C Gate0 Move Threshold"
+        name: "LD2410C G0 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate0 Still Threshold"
+        name: "LD2410C G0 Still Threshold"
     g1:
       move_threshold:
-        name: "LD2410C Gate1 Move Threshold"
+        name: "LD2410C G1 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate1 Still Threshold"
+        name: "LD2410C G1 Still Threshold"
     g2:
       move_threshold:
-        name: "LD2410C Gate2 Move Threshold"
+        name: "LD2410C G2 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate2 Still Threshold"
+        name: "LD2410C G2 Still Threshold"
     g3:
       move_threshold:
-        name: "LD2410C Gate3 Move Threshold"
+        name: "LD2410C G3 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate3 Still Threshold"
+        name: "LD2410C G3 Still Threshold"
     g4:
       move_threshold:
-        name: "LD2410C Gate4 Move Threshold"
+        name: "LD2410C G4 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate4 Still Threshold"
+        name: "LD2410C G4 Still Threshold"
     g5:
       move_threshold:
-        name: "LD2410C Gate5 Move Threshold"
+        name: "LD2410C G5 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate5 Still Threshold"
+        name: "LD2410C G5 Still Threshold"
     g6:
       move_threshold:
-        name: "LD2410C Gate6 Move Threshold"
+        name: "LD2410C G6 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate6 Still Threshold"
+        name: "LD2410C G6 Still Threshold"
     g7:
       move_threshold:
-        name: "LD2410C Gate7 Move Threshold"
+        name: "LD2410C G7 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate7 Still Threshold"
+        name: "LD2410C G7 Still Threshold"
     g8:
       move_threshold:
-        name: "LD2410C Gate8 Move Threshold"
+        name: "LD2410C G8 Move Threshold"
       still_threshold:
-        name: "LD2410C Gate8 Still Threshold"
+        name: "LD2410C G8 Still Threshold"
 
 select:
   # Occupancy Detect Mode:
