@@ -977,6 +977,51 @@ sensor:
     detection_distance:
       name: "LD2410C Presence Distance"
       icon: mdi:signal-distance-variant
+    g0:
+      move_energy:
+        name: "LD2410C G0 Move Energy"
+      still_energy:
+        name: "LD2410C G0 still energy"
+    g1:
+      move_energy:
+        name: "LD2410C G1 move energy"
+      still_energy:
+        name: "LD2410C G1 still energy"
+    g2:
+      move_energy:
+        name: "LD2410C G2 move energy"
+      still_energy:
+        name: "LD2410C G2 still energy"
+    g3:
+      move_energy:
+        name: "LD2410C G3 move energy"
+      still_energy:
+        name: "LD2410C G3 still energy"
+    g4:
+      move_energy:
+        name: "LD2410C G4 move energy"
+      still_energy:
+        name: "LD2410C G4 still energy"
+    g5:
+      move_energy:
+        name: "LD2410C G5 move energy"
+      still_energy:
+        name: "LD2410C G5 still energy"
+    g6:
+      move_energy:
+        name: "LD2410C G6 move energy"
+      still_energy:
+        name: "LD2410C G6 still energy"
+    g7:
+      move_energy:
+        name: "LD2410C G7 move energy"
+      still_energy:
+        name: "LD2410C G7 still energy"
+    g8:
+      move_energy:
+        name: "LD2410C G8 move energy"
+      still_energy:
+        name: "LD2410C G8 still energy"
 
 binary_sensor:
   - platform: template
@@ -1102,6 +1147,47 @@ button:
       name: "LD2410C Factory Reset"
       icon: mdi:restart-alert
       entity_category: diagnostic
+    query_params:
+      name: "LD2410C Query Params"
+      id: ld2410c_query_params
+      entity_category: diagnostic
+
+  - platform: template
+    name: "LD2410C Calibration"
+    id: calibrate_ld2410
+    entity_category: diagnostic
+    # Courtesy of esauvisky on https://community.home-assistant.io/t/ld2410-esphome-tips/477058/811
+    on_press:
+      then:
+        # 1. Enable Configuration Mode
+        - logger.log: "INFO: Starting LD2410 calibration sequence... You have 10 seconds to clear the room!"
+        - logger.log: "DEBUG: Sending Enable Configuration command (0x00FF)"
+        - uart.write:
+            id: ld2410_uart
+            # Data: HDR | LEN=4 | CMD=0xFF | VAL=0x01 | FTR
+            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01]
+        - delay: 1000ms
+
+        # 2. Start the auto-calibration
+        - logger.log: "DEBUG: Sending Start Calibration command (0x000B, 60s)"
+        - uart.write:
+            id: ld2410_uart
+            # Data: HDR | LEN=4 | CMD=0x0B | VAL=0x3C00 | FTR
+            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x0B, 0x00, 0x3C, 0x00, 0x04, 0x03, 0x02, 0x01]
+        - delay: 1000ms
+
+        # 3. Disable Configuration Mode
+        - logger.log: "DEBUG: Sending End Configuration command (0x00FE)"
+        - uart.write:
+            id: ld2410_uart
+            # Data: HDR | LEN=2 | CMD=0xFE | FTR (No value needed)
+            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01]
+        - logger.log: "INFO: LD2410 calibration sequence sent. Ensure room is empty for 70 seconds!"
+
+        # 4. Wait 75s and then query parameters
+        - delay: 75000ms
+        - button.press: ld2410c_query_params
+        - logger.log: "INFO: LD2410 calibration finished."
 
   - platform: restart
     name: "ESP32 Restart"
