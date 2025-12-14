@@ -841,7 +841,7 @@ sensor:
             // Clamp to 0–100 %
             if (rh_corr < 0) rh_corr = 0;
             if (rh_corr > 100) rh_corr = 100;
-            return rh_corr + id(humidity_offset);
+            return rh_corr;
         - offset: !lambda return id(humidity_offset);
         - sliding_window_moving_average:
             window_size: 20
