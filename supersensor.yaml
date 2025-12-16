@@ -604,7 +604,7 @@ micro_wake_word:
   id: mww
   microphone:
     microphone: mic
-    gain_factor: 64
+    gain_factor: 32
   stop_after_detection: false
   models:
     - model: github://joshuaboniface/Custom_V2_MicroWakeWords/models/computer/computer.json
