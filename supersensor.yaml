@@ -1169,11 +1169,11 @@ button:
         - delay: 1000ms
 
         # 2. Start the auto-calibration
-        - logger.log: "DEBUG: Sending Start Calibration command (0x000B, 60s)"
+        - logger.log: "DEBUG: Sending Start Calibration command (0x000B, 300s)"
         - uart.write:
             id: ld2410_uart
-            # Data: HDR | LEN=4 | CMD=0x0B | VAL=0x3C00 | FTR
-            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x0B, 0x00, 0x3C, 0x00, 0x04, 0x03, 0x02, 0x01]
+            # Data: HDR | LEN=4 | CMD=0x0B | VAL=0x12C0 | FTR
+            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x0B, 0x00, 0x12, 0xC0, 0x04, 0x03, 0x02, 0x01]
         - delay: 1000ms
 
         # 3. Disable Configuration Mode
@@ -1182,10 +1182,10 @@ button:
             id: ld2410_uart
             # Data: HDR | LEN=2 | CMD=0xFE | FTR (No value needed)
             data: [0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01]
-        - logger.log: "INFO: LD2410 calibration sequence sent. Ensure room is empty for 70 seconds!"
+        - logger.log: "INFO: LD2410 calibration sequence sent. Ensure room remains empty for 300+ seconds!"
 
-        # 4. Wait 75s and then query parameters
-        - delay: 75000ms
+        # 4. Wait 305s and then query parameters
+        - delay: 305000ms
         - button.press: ld2410c_query_params
         - logger.log: "INFO: LD2410 calibration finished."
 
