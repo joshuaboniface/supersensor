@@ -776,7 +776,7 @@ sensor:
     update_interval: 5s
 
   - platform: template
-    name: "SGP41 TVOC (µg/m³)"
+    name: "SGP41 TVOC (µg⁄m³)"
     id: sgp41_tvoc_ugm3
     icon: mdi:molecule
     lambda: |-
@@ -784,7 +784,7 @@ sensor:
       if (i < 1) return NAN;
       float tvoc = (log(501.0 - i) - 6.24) * -878.53;
       return tvoc;
-    unit_of_measurement: "µg/m³"
+    unit_of_measurement: "µg⁄m³"
     accuracy_decimals: 0
     update_interval: 15s
 
