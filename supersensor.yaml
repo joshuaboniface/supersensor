@@ -655,6 +655,10 @@ voice_assistant:
     # Trigger LED state - pipeline, stt
     - lambda: 'id(led_state)=2; id(led_substate)=2;'
     - script.execute: led_start
+  on_error:
+    # Trigger LED state - off
+    - lambda: 'id(led_state)=0; id(led_substate)=0;'
+    - script.execute: led_start
   on_tts_start:
     - if:
         condition:
@@ -678,10 +682,6 @@ voice_assistant:
   on_tts_end:
     - logger.log: "Finished STT result"
     - voice_assistant.stop:
-  on_end:
-    - script.execute: led_start
-  on_idle:
-    - script.execute: led_start
 
 light:
   - platform: rgb
