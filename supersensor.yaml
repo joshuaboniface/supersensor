@@ -678,6 +678,10 @@ voice_assistant:
   on_tts_end:
     - logger.log: "Finished STT result"
     - voice_assistant.stop:
+  on_end:
+    - script.execute: led_start
+  on_idle:
+    - script.execute: led_start
 
 light:
   - platform: rgb
