@@ -3,8 +3,8 @@
 This page details the calibration steps for a SuperSensor v3.x, as well as all the available configurable options and sensor entities. It can be used as a standard reference both for initial deployments and future tweaks or modifications to the configuration.
 
 * [Calibration](#calibration)
-   * [SHT45 Temperature Sensor](#sht45-temperature-sensor)
    * [HLK-LD2410C Radar Sensor](#hlk-ld2410C-radar-sensor)
+   * [SHT45 Temperature Sensor](#sht45-temperature-sensor)
 * [Dashboard](#dashboard)
 * [Configuration Entities](#configuration)
    * [Presence](#presence)

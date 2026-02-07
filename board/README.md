@@ -7,7 +7,7 @@ The design features several individual parts:
 * A core SuperSensor board which ties the various components together.
 * The UESM comprising three discrete boards.
 
-You can import the design definition files (`*.easyeda.json`) directly into EasyEDA via "File" -> "Open" -> "EasyEDA". The schematic is provided for reference in both EasyEDA and SVG formats; if you just wish to manufacture the boards, you only need to import the board definitions, then via "Fabrication" -> "One-click Order PCB/SMT" complete the order at [JLCPCB](https://jlcpcb.com). We order all boards in a black silkscreen with all other options as default.
+You can import the design definition files (`*.easyeda.json`) directly into EasyEDA via "File" -> "Open" -> "EasyEDA". The schematic is provided for reference in both EasyEDA and SVG formats; if you just wish to manufacture the boards, you only need to import the board definitions, then via "Fabrication" -> "One-click Order PCB/SMT" complete the order at [JLCPCB](https://jlcpcb.com). We order all boards in a black silkscreen with lead-free HASL (for use with low-temperature Ga-Sn solder paste) and all other options as default.
 
 You can also see the designs directly on [OSHWLab here](https://oshwlab.com/joshuaboniface/supersensor-3-0).
 
@@ -73,7 +73,7 @@ To assembly the UESM you will need, in addition to the listed components in the 
 
 * Isopropyl alcohol (99% ideal) and paper towel.
 * Low-temperature (138°C SnGa) solder paste (for delicate SMD components).
-* Normal (PbSn) solder (for the final pin headers).
+* Normal (PbSn) solder (for the final pin headers, if you wish).
 * A hot air reflow station, and optionally a hotplate, with precise temperature control.
 * A soldering iron with a (semi-)fine tip.
 * A set of helping hands (aligator clips on adjustable extensions).
@@ -102,7 +102,7 @@ The assembly proceeds in three steps: first the assembly of the `top` board's to
 
 2. Apply a fair amount of solder paste to each component pad, ensuring enough coverage for the components to firmly sit into the paste. Place each component onto its pads with tweezers.
 
-3. Heat tte hot air station to 240-260C. Apply heat directly to each component until all the solder reflows. Check carefully for any bridges or failed joins and gently reflow as necessary.
+3. Heat the hot air station to 240-260C. Apply heat directly to each component until all the solder reflows. Check carefully for any bridges or failed joins and gently reflow as necessary.
 
 4. Wait for the board to cool.
 
@@ -120,9 +120,9 @@ The assembly proceeds in three steps: first the assembly of the `top` board's to
 
 3. Take a `spacer` PCB, and place it on top of the `base` PCB, carefully aligning each hole and ensuring straightness.
 
-4. Heat the hot air station to 240-260C. Apply heat to the top of the `spacer` PCB while gently pressing down with tweezers, until the two PCBs join flat and make a good solder connection on each pin. Verify electrical connectivity o be certain.
+4. Heat the hot air station to 240-260C. Apply heat to the top of the `spacer` PCB while gently pressing down with tweezers, until the two PCBs join flat and make a good solder connection on each pin. Verify electrical connectivity to be certain.
 
-5. Repeat the proces sin step 2 with the `spacer` PCB.
+5. Repeat the process in step 2 with the `spacer` PCB.
 
 6. Take the completed `top` PCB, and place it on top of the `spacer` PCB, carefully aligning each hole and ensuring straightness. There will likely be a gap on the side closes to you as the arm rests on the pin protrusions; this is normal.
 
@@ -155,7 +155,7 @@ If you find there are inter-board connectivity issues, the most likely cause is 
 To assembly the SuperSensor you will need, in addition to the listed components in the main README, the following:
 
 * Isopropyl alcohol (99% ideal) and paper towel.
-* Normal (PbSn) solder.
+* Normal (PbSn) solder or low-temperature (138°C SnGa) solder paste (if lead-free is desired).
 * A soldering iron with a (semi-)fine tip.
 * A set of helping hands (aligator clips on adjustable extensions).
 * A temperature-safe soldering work area.
@@ -164,7 +164,7 @@ Assembly of this module is fairly straightforward and aside from 3 SMD component
 
 1. Clean the PCB thoroughly with isopropyl alcohol and paper towel.
 
-2. Solder on the 3 SMD passive components (C4, R5, & R6).
+2. Solder on the 3 SMD passive components (C4, R5, & R6); if using solder paste, leverage hot air or a hotplate, or carefully use a solder iron with a fine tip.
 
 3. Insert the LEDs into their holes, carefully noting the direction and aligning the flat side with the silkscreen. Solder in the leads carefully using a fine tip to avoid bridges, and trim off the excess leads.
 
