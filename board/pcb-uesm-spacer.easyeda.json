@@ -1,0 +1,187 @@
+{
+  "head": {
+    "docType": "3",
+    "editorVersion": "6.5.51",
+    "newgId": true,
+    "c_para": {},
+    "x": "4020",
+    "y": "3363",
+    "hasIdFlag": true,
+    "importFlag": 0,
+    "transformList": ""
+  },
+  "canvas": "CA~1000~1000~#000000~yes~#FFFFFF~3.937~1000~1000~line~3.937~mm~0.598424~45~visible~0.3937~4020~3363~1~yes",
+  "shape": [
+    "CIRCLE~4039.685~3343.315~19.685~1~10~gge5017~0~S$1207~circle_gge5074,circle_gge5077",
+    "PAD~ELLIPSE~4047.559~3331.504~6~6~11~3V3D~1~1.8~~0~gge5029~0~~Y~1~0~0.2~4047.559,3331.504",
+    "PAD~ELLIPSE~4031.811~3331.504~6~6~11~SCL~1~1.8~~0~gge5020~0~~Y~1~0~0.2~4031.811,3331.504",
+    "PAD~ELLIPSE~4031.811~3343.315~6~6~11~GND~1~1.8~~0~gge5035~0~~Y~1~0~0.2~4031.811,3343.315",
+    "PAD~ELLIPSE~4047.559~3343.315~6~6~11~3V3~1~1.8~~0~gge5032~0~~Y~1~0~0.2~4047.559,3343.315",
+    "PAD~ELLIPSE~4031.811~3355.126~6~6~11~SDA~1~1.8~~0~gge5023~0~~Y~1~0~0.2~4031.811,3355.126",
+    "PAD~ELLIPSE~4047.559~3355.126~6~6~11~INT~1~1.8~~0~gge5026~0~~Y~1~0~0.2~4047.559,3355.126"
+  ],
+  "layers": [
+    "1~TopLayer~#FF0000~true~true~true~",
+    "2~BottomLayer~#0000FF~true~false~true~",
+    "3~TopSilkLayer~#FFCC00~true~false~true~",
+    "4~BottomSilkLayer~#66CC33~true~false~true~",
+    "5~TopPasteMaskLayer~#808080~true~false~true~",
+    "6~BottomPasteMaskLayer~#800000~true~false~true~",
+    "7~TopSolderMaskLayer~#800080~true~false~true~0.3",
+    "8~BottomSolderMaskLayer~#AA00FF~true~false~true~0.3",
+    "9~Ratlines~#6464FF~true~false~true~",
+    "10~BoardOutLine~#FF00FF~true~false~true~",
+    "11~Multi-Layer~#C0C0C0~true~false~true~",
+    "12~Document~#FFFFFF~false~false~true~",
+    "13~TopAssembly~#33CC99~false~false~false~",
+    "14~BottomAssembly~#5555FF~false~false~false~",
+    "15~Mechanical~#F022F0~false~false~false~",
+    "19~3DModel~#66CCFF~false~false~false~",
+    "21~Inner1~#999966~false~false~false~~",
+    "22~Inner2~#008000~false~false~false~~",
+    "23~Inner3~#00FF00~false~false~false~~",
+    "24~Inner4~#BC8E00~false~false~false~~",
+    "25~Inner5~#70DBFA~false~false~false~~",
+    "26~Inner6~#00CC66~false~false~false~~",
+    "27~Inner7~#9966FF~false~false~false~~",
+    "28~Inner8~#800080~false~false~false~~",
+    "29~Inner9~#008080~false~false~false~~",
+    "30~Inner10~#15935F~false~false~false~~",
+    "31~Inner11~#000080~false~false~false~~",
+    "32~Inner12~#00B400~false~false~false~~",
+    "33~Inner13~#2E4756~false~false~false~~",
+    "34~Inner14~#99842F~false~false~false~~",
+    "35~Inner15~#FFFFAA~false~false~false~~",
+    "36~Inner16~#99842F~false~false~false~~",
+    "37~Inner17~#2E4756~false~false~false~~",
+    "38~Inner18~#3535FF~false~false~false~~",
+    "39~Inner19~#8000BC~false~false~false~~",
+    "40~Inner20~#43AE5F~false~false~false~~",
+    "41~Inner21~#C3ECCE~false~false~false~~",
+    "42~Inner22~#728978~false~false~false~~",
+    "43~Inner23~#39503F~false~false~false~~",
+    "44~Inner24~#0C715D~false~false~false~~",
+    "45~Inner25~#5A8A80~false~false~false~~",
+    "46~Inner26~#2B937E~false~false~false~~",
+    "47~Inner27~#23999D~false~false~false~~",
+    "48~Inner28~#45B4E3~false~false~false~~",
+    "49~Inner29~#215DA1~false~false~false~~",
+    "50~Inner30~#4564D7~false~false~false~~",
+    "51~Inner31~#6969E9~false~false~false~~",
+    "52~Inner32~#9069E9~false~false~false~~",
+    "99~ComponentShapeLayer~#00CCCC~false~false~false~0.4",
+    "100~LeadShapeLayer~#CC9999~false~false~false~",
+    "101~ComponentMarkingLayer~#66FFCC~false~false~false~",
+    "Hole~Hole~#222222~false~false~true~",
+    "DRCError~DRCError~#FAD609~false~false~true~"
+  ],
+  "objects": [
+    "All~true~false",
+    "Component~true~true",
+    "Prefix~true~true",
+    "Name~true~false",
+    "Track~true~true",
+    "Pad~true~true",
+    "Via~true~true",
+    "Hole~true~true",
+    "Copper_Area~true~true",
+    "Circle~true~true",
+    "Arc~true~true",
+    "Solid_Region~true~true",
+    "Text~true~true",
+    "Image~true~true",
+    "Rect~true~true",
+    "Dimension~true~true",
+    "Protractor~true~true"
+  ],
+  "BBox": {
+    "x": 4020,
+    "y": 3323.6,
+    "width": 39.4,
+    "height": 39.4
+  },
+  "preference": {
+    "hideFootprints": "",
+    "hideNets": ""
+  },
+  "DRCRULE": {
+    "Default": {
+      "trackWidth": 0.5984,
+      "clearance": 0.5984,
+      "viaHoleDiameter": 2.4016,
+      "viaHoleD": 1.2008
+    },
+    "isRealtime": true,
+    "isDrcOnRoutingOrPlaceVia": false,
+    "checkObjectToCopperarea": true,
+    "showDRCRangeLine": true
+  },
+  "routerRule": {
+    "unit": "mm",
+    "trackWidth": 0.152,
+    "trackClearance": 0.152,
+    "viaHoleD": 0.305,
+    "viaDiameter": 0.61,
+    "routerLayers": [
+      1,
+      2
+    ],
+    "smdClearance": 0.152,
+    "specialNets": [
+      {
+        "net": "SCL",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      },
+      {
+        "net": "SDA",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      },
+      {
+        "net": "INT",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      },
+      {
+        "net": "3V3D",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      },
+      {
+        "net": "3V3",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      },
+      {
+        "net": "GND",
+        "width": "0.5984px",
+        "clearance": "0.5984px",
+        "viaHoleD": "1.2008px",
+        "viaHoleDiameter": "2.4016px"
+      }
+    ],
+    "nets": [
+      "3V3",
+      "3V3D",
+      "GND",
+      "INT",
+      "SCL",
+      "SDA"
+    ],
+    "padsCount": 24,
+    "skipNets": [],
+    "realtime": true
+  },
+  "netColors": {}
+}

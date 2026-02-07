@@ -1722,6 +1722,9 @@ select:
       - "Hey Mycroft"
       - "Okay Nabu"
       - "Alexa"
+      - "Hey Friday"
+      - "Hey Wabi"
+      - "Wasabi"
     initial_option: "Computer"
     optimistic: true
     restore_value: true
@@ -1752,6 +1755,21 @@ select:
             lambda: 'return x != "Alexa";'
           then:
             - micro_wake_word.disable_model: mww_alexa
+      - if:
+          condition:
+            lambda: 'return x != "Hey Friday";'
+          then:
+            - micro_wake_word.disable_model: mww_hey_friday
+      - if:
+          condition:
+            lambda: 'return x != "Hey Wabi";'
+          then:
+            - micro_wake_word.disable_model: mww_hey_wabi
+      - if:
+          condition:
+            lambda: 'return x != "Wasabi";'
+          then:
+            - micro_wake_word.disable_model: mww_wasabi
       # Enable model we selected
       - if:
           condition:
@@ -1778,6 +1796,21 @@ select:
             lambda: 'return x == "Alexa";'
           then:
             - micro_wake_word.enable_model: mww_alexa
+      - if:
+          condition:
+            lambda: 'return x == "Hey Friday";'
+          then:
+            - micro_wake_word.enable_model: mww_hey_friday
+      - if:
+          condition:
+            lambda: 'return x == "Hey Wabi";'
+          then:
+            - micro_wake_word.enable_model: mww_hey_wabi
+      - if:
+          condition:
+            lambda: 'return x == "Wasabi";'
+          then:
+            - micro_wake_word.enable_model: mww_wasabi
 
   - platform: template
     name: "Wake Word Sensitivity"
