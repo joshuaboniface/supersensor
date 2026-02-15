@@ -49,6 +49,7 @@ esphome:
             id(radar_presence).publish_state(false);
     - priority: -100
       then:
+        - button.press: ld2410c_restart
         - if:
             condition:
               - switch.is_on: enable_voice_support
@@ -1151,6 +1152,7 @@ button:
   - platform: ld2410
     restart:
       name: "LD2410C Restart"
+      id: ld2410c_restart
       icon: mdi:power-cycle
       entity_category: diagnostic
     factory_reset:
