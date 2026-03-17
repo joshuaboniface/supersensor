@@ -49,7 +49,6 @@ esphome:
             id(radar_presence).publish_state(false);
     - priority: -100
       then:
-        - button.press: ld2410c_restart
         - if:
             condition:
               - switch.is_on: enable_voice_support
@@ -487,6 +486,15 @@ script:
           }
 
 interval:
+  # Regular LD2410C state check every 30s
+  - interval: 30s
+    then:
+      - lambda: |-
+          if(isnan(id(ld2410c_presence_distance).state)) {
+            ESP_LOGI("radar_watchdog", "LD2410C not reporting stats; restarting");
+            id(ld2410c_restart).press();
+          }
+
   # Regular MWW state check every 30s
   - interval: 30s
     then:
@@ -973,11 +981,11 @@ sensor:
     ld2410_id: ld2410_radar
     moving_distance:
       name: "LD2410C Moving Distance"
-      id: moving_distance
+      id: ld2410c_moving_distance
       icon: mdi:signal-distance-variant
     still_distance:
       name: "LD2410C Still Distance"
-      id: still_distance
+      id: ld2410c_still_distance
       icon: mdi:signal-distance-variant
     moving_energy:
       name: "LD2410C Move Energy"
@@ -987,6 +995,7 @@ sensor:
       icon: mdi:flash
     detection_distance:
       name: "LD2410C Presence Distance"
+      id: ld2410c_presence_distance
       icon: mdi:signal-distance-variant
     g0:
       move_energy:
