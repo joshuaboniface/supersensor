@@ -27,7 +27,7 @@ esphome:
   project:
     name: joshuaboniface.supersensor
     version: "2.0"
-  min_version: 2025.5.0
+  min_version: 2026.3.0
   on_boot:
     - priority: 600
       then:
@@ -874,19 +874,12 @@ sensor:
     humidity: sht45_humidity
     id: sht45_absolute_humidity
 
-  - platform: template
+  - platform: dew_point
     name: "SHT45 Dew Point"
     icon: mdi:thermometer-water
     id: sht45_dew_point
-    unit_of_measurement: "°C"
-    lambda: |-
-      float temp = id(sht45_temperature).state;
-      float rh = id(sht45_humidity).state;
-      if (isnan(temp) || isnan(rh)) return NAN;
-      float a = 17.27, b = 237.7;
-      float alpha = ((a * temp) / (b + temp)) + log(rh / 100.0);
-      return (b * alpha) / (a - alpha);
-    update_interval: 15s
+    temperature: sht45_temperature
+    humidity: sht45_humidity
 
   - platform: template
     name: "Room Health Score"
