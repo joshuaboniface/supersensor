@@ -1,7 +1,5 @@
 # SuperSensor v3.x
 
-**NOTE:** The SuperSensor v3.x is still under development! Aspects of this branch may change at any time; please ignore it until this warning is removed!
-
 ![SuperSensor](images/cover.png)
 
 The SuperSensor is a free-and-open-source multi-sensor array with voice control capabilities using ESPHome, designed for use with Home Assistant.

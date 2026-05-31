@@ -1,6 +1,6 @@
 # SuperSensor v3.x Case
 
-This is a 3D-printable case/enclosure for the SuperSensor v3.0 module. This case is required for proper sensor operation, and for aesthetics and mounting purposes, but is not strictly required.
+This is a 3D-printable case/enclosure for the SuperSensor v3.0 module. This case is recommended for proper sensor operation, and for aesthetics and mounting purposes, but is not strictly required.
 
 The design features several individual parts:
 
@@ -41,9 +41,9 @@ As a general set of parameters, all models should be printed with the following,
 * Concentric patterns for surfaces (visual only)
 * Back (preferred) or Aligned seams (visual only)
 
-All other options are be specific to your printer, material, and desired effect.
+All other options are specific to your printer, material, and desired effect and can be adjusted as needed.
 
-The parts should be printed in a solid, durable material of any colour you wish, except for the insert as noted below. We use ABS in one of three colours (black, gray, white) for our official prints.
+The parts should be printed in a solid, durable material of any colour you wish, except for the insert as noted below. We use white or black ABS (depending on the aesthetics of the final location) for our official prints.
 
 ### Main Case Models
 
