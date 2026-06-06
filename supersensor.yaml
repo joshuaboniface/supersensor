@@ -47,6 +47,7 @@ esphome:
             id(pir_presence).publish_state(false);
             id(light_presence).publish_state(false);
             id(radar_presence).publish_state(false);
+            id(ld2410c_calibration_status).publish_state("Idle");
     - priority: -100
       then:
         - if:
@@ -171,6 +172,19 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: "0"
+
+  #
+  # LD2410C ACK tracking (for the calibration sequence)
+  #
+  - id: ld2410_last_ack_cmd
+    type: int
+    restore_value: no
+    initial_value: "-1"
+
+  - id: ld2410_last_ack_status
+    type: int
+    restore_value: no
+    initial_value: "-1"
 
   #
   # Wake Word settings
@@ -481,15 +495,132 @@ script:
             id(supersensor_occupancy).publish_state(new_state);
           }
 
+  #
+  # LD2410C calibration handlers
+  #
+  # Runs the LD2410C's built-in auto-threshold (background noise) calibration
+  # for 900 seconds, then adds +2 headroom to every gate threshold it found,
+  # since the auto routine reports measured maximums and we want a safe margin.
+  # Courtesy of esauvisky on https://community.home-assistant.io/t/ld2410-esphome-tips/477058/811
+  #
+  - id: ld2410_calibration
+    mode: single
+    then:
+      # 1. Give the user 10 seconds to clear the room
+      - logger.log: "INFO: Starting LD2410 calibration sequence... You have 10 seconds to clear the room!"
+      - lambda: 'id(ld2410c_calibration_status).publish_state("Waiting");'
+      - delay: 10s
+
+      # 2. Enable Configuration Mode
+      - logger.log: "DEBUG: Sending Enable Configuration command (0x00FF)"
+      - lambda: 'id(ld2410_last_ack_cmd) = -1; id(ld2410_last_ack_status) = -1;'
+      - uart.write:
+          id: ld2410_uart
+          # Data: HDR | LEN=4 | CMD=0xFF | VAL=0x01 | FTR
+          data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01]
+      - delay: 1000ms
+      - if:
+          condition:
+            lambda: 'return !(id(ld2410_last_ack_cmd) == 0xFF && id(ld2410_last_ack_status) == 0);'
+          then:
+            - script.execute: ld2410_calibration_fail
+            - script.stop: ld2410_calibration
+
+      # 3. Start the auto-calibration (900 seconds)
+      - logger.log: "DEBUG: Sending Start Calibration command (0x000B, 900s)"
+      - lambda: 'id(ld2410_last_ack_cmd) = -1; id(ld2410_last_ack_status) = -1;'
+      - uart.write:
+          id: ld2410_uart
+          # Data: HDR | LEN=4 | CMD=0x0B | VAL=0x0384 (900, little-endian) | FTR
+          data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x0B, 0x00, 0x84, 0x03, 0x04, 0x03, 0x02, 0x01]
+      - delay: 1000ms
+      - if:
+          condition:
+            lambda: 'return !(id(ld2410_last_ack_cmd) == 0x0B && id(ld2410_last_ack_status) == 0);'
+          then:
+            - script.execute: ld2410_calibration_fail
+            - script.stop: ld2410_calibration
+
+      # 4. Disable Configuration Mode
+      - logger.log: "DEBUG: Sending End Configuration command (0x00FE)"
+      - uart.write:
+          id: ld2410_uart
+          # Data: HDR | LEN=2 | CMD=0xFE | FTR (No value needed)
+          data: [0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01]
+      - logger.log: "INFO: LD2410 calibration sequence sent. Ensure room remains empty for 930+ seconds!"
+      - lambda: 'id(ld2410c_calibration_status).publish_state("Calibrating");'
+
+      # 5. Wait 930s (900s run + 30s of buffer) and then query parameters
+      - delay: 930s
+      - lambda: 'id(ld2410c_calibration_status).publish_state("Polling");'
+      - button.press: ld2410c_query_params
+      - delay: 5s
+
+      # 6. Add +2 headroom to each gate threshold found by the auto-calibration
+      - logger.log: "INFO: Adding +2 headroom to all LD2410 gate thresholds"
+      - repeat:
+          count: 9
+          then:
+            - lambda: |-
+                number::Number *move_thresholds[9] = {
+                  id(ld2410c_g0_move_threshold), id(ld2410c_g1_move_threshold),
+                  id(ld2410c_g2_move_threshold), id(ld2410c_g3_move_threshold),
+                  id(ld2410c_g4_move_threshold), id(ld2410c_g5_move_threshold),
+                  id(ld2410c_g6_move_threshold), id(ld2410c_g7_move_threshold),
+                  id(ld2410c_g8_move_threshold)
+                };
+                number::Number *still_thresholds[9] = {
+                  id(ld2410c_g0_still_threshold), id(ld2410c_g1_still_threshold),
+                  id(ld2410c_g2_still_threshold), id(ld2410c_g3_still_threshold),
+                  id(ld2410c_g4_still_threshold), id(ld2410c_g5_still_threshold),
+                  id(ld2410c_g6_still_threshold), id(ld2410c_g7_still_threshold),
+                  id(ld2410c_g8_still_threshold)
+                };
+                auto bump = [](number::Number *threshold) {
+                  if (isnan(threshold->state)) return;
+                  float value = threshold->state + 2.0f;
+                  if (value > 100.0f) value = 100.0f;
+                  auto call = threshold->make_call();
+                  call.set_value(value);
+                  call.perform();
+                };
+                bump(move_thresholds[iteration]);
+                bump(still_thresholds[iteration]);
+            - delay: 500ms
+
+      # 7. Re-query parameters to confirm the final values
+      - button.press: ld2410c_query_params
+      - delay: 5s
+      - lambda: 'id(ld2410c_calibration_status).publish_state("Done");'
+      - logger.log: "INFO: LD2410 calibration finished."
+
+  - id: ld2410_calibration_fail
+    then:
+      - logger.log:
+          level: ERROR
+          format: "LD2410 calibration failed (last ACK command: %d, status: %d)"
+          args: ['id(ld2410_last_ack_cmd)', 'id(ld2410_last_ack_status)']
+      - lambda: 'id(ld2410c_calibration_status).publish_state("Failed");'
+      # Try to leave Configuration Mode cleanly in case it was enabled
+      - uart.write:
+          id: ld2410_uart
+          # Data: HDR | LEN=2 | CMD=0xFE | FTR (No value needed)
+          data: [0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01]
+
 interval:
-  # Regular LD2410C state check every 30s
+  # Regular LD2410C state check every 30s (skipped while calibration is running)
   - interval: 30s
     then:
-      - lambda: |-
-          if(isnan(id(ld2410c_presence_distance).state)) {
-            ESP_LOGI("radar_watchdog", "LD2410C not reporting stats; restarting");
-            id(ld2410c_restart).press();
-          }
+      - if:
+          condition:
+            - not:
+                script.is_running: ld2410_calibration
+          then:
+            - lambda: |-
+                if(isnan(id(ld2410c_presence_distance).state)) {
+                  ESP_LOGI("radar_watchdog", "LD2410C not reporting stats; restarting");
+                  id(ld2410c_restart).press();
+                }
 
   # Regular MWW state check every 30s
   - interval: 30s
@@ -568,6 +699,29 @@ uart:
   data_bits: 8
   stop_bits: 1
   parity: NONE
+  # Tap RX traffic to capture LD2410 command ACK frames for the calibration
+  # sequence; this observes the data without consuming it from the ld2410
+  # component, so normal operation is unaffected
+  debug:
+    direction: RX
+    after:
+      delimiter: [0x04, 0x03, 0x02, 0x01]
+    sequence:
+      - lambda: |-
+          // Scan for LD2410 ACK frames:
+          //   HDR (FD FC FB FA) | LEN | CMD|0x0100 | STATUS | ... | FTR (04 03 02 01)
+          // Status 0 = success, 1 = failure
+          for (size_t i = 0; i + 9 < bytes.size(); i++) {
+            if (bytes[i] == 0xFD && bytes[i+1] == 0xFC && bytes[i+2] == 0xFB && bytes[i+3] == 0xFA) {
+              uint16_t cmd = bytes[i+6] | (bytes[i+7] << 8);
+              uint16_t status = bytes[i+8] | (bytes[i+9] << 8);
+              if ((cmd & 0xFF00) == 0x0100) {
+                id(ld2410_last_ack_cmd) = cmd & 0x00FF;
+                id(ld2410_last_ack_status) = status;
+                ESP_LOGD("ld2410_ack", "Got ACK for command 0x%02X with status %d", cmd & 0x00FF, status);
+              }
+            }
+          }
 
 i2c:
   sda: GPIO35
@@ -1123,6 +1277,14 @@ text_sensor:
     mac_address:
       name: "LD2410C MAC Address"
 
+  # Calibration sequence progress: Idle, Waiting, Calibrating, Polling, Done, Failed
+  - platform: template
+    name: "LD2410C Calibration Status"
+    id: ld2410c_calibration_status
+    icon: mdi:progress-wrench
+    entity_category: diagnostic
+    update_interval: never
+
   - platform: template
     name: "Chemical Pollution"
     id: sgp41_chemical_pollution
@@ -1172,38 +1334,11 @@ button:
     name: "LD2410C Calibration"
     id: calibrate_ld2410
     entity_category: diagnostic
-    # Courtesy of esauvisky on https://community.home-assistant.io/t/ld2410-esphome-tips/477058/811
+    # See the ld2410_calibration script for the actual sequence; the script
+    # uses mode "single" so repeated presses during a run are ignored
     on_press:
       then:
-        # 1. Enable Configuration Mode
-        - logger.log: "INFO: Starting LD2410 calibration sequence... You have 10 seconds to clear the room!"
-        - logger.log: "DEBUG: Sending Enable Configuration command (0x00FF)"
-        - uart.write:
-            id: ld2410_uart
-            # Data: HDR | LEN=4 | CMD=0xFF | VAL=0x01 | FTR
-            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01]
-        - delay: 1000ms
-
-        # 2. Start the auto-calibration
-        - logger.log: "DEBUG: Sending Start Calibration command (0x000B, 300s)"
-        - uart.write:
-            id: ld2410_uart
-            # Data: HDR | LEN=4 | CMD=0x0B | VAL=0x012C | FTR
-            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0x0B, 0x00, 0x2C, 0x01, 0x04, 0x03, 0x02, 0x01]
-        - delay: 1000ms
-
-        # 3. Disable Configuration Mode
-        - logger.log: "DEBUG: Sending End Configuration command (0x00FE)"
-        - uart.write:
-            id: ld2410_uart
-            # Data: HDR | LEN=2 | CMD=0xFE | FTR (No value needed)
-            data: [0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01]
-        - logger.log: "INFO: LD2410 calibration sequence sent. Ensure room remains empty for 330+ seconds!"
-
-        # 4. Wait 330s (300s run + 30s of buffer) and then query parameters
-        - delay: 330000ms
-        - button.press: ld2410c_query_params
-        - logger.log: "INFO: LD2410 calibration finished."
+        - script.execute: ld2410_calibration
 
   - platform: restart
     name: "ESP32 Restart"
@@ -1541,48 +1676,66 @@ number:
     g0:
       move_threshold:
         name: "LD2410C G0 Move Threshold"
+        id: ld2410c_g0_move_threshold
       still_threshold:
         name: "LD2410C G0 Still Threshold"
+        id: ld2410c_g0_still_threshold
     g1:
       move_threshold:
         name: "LD2410C G1 Move Threshold"
+        id: ld2410c_g1_move_threshold
       still_threshold:
         name: "LD2410C G1 Still Threshold"
+        id: ld2410c_g1_still_threshold
     g2:
       move_threshold:
         name: "LD2410C G2 Move Threshold"
+        id: ld2410c_g2_move_threshold
       still_threshold:
         name: "LD2410C G2 Still Threshold"
+        id: ld2410c_g2_still_threshold
     g3:
       move_threshold:
         name: "LD2410C G3 Move Threshold"
+        id: ld2410c_g3_move_threshold
       still_threshold:
         name: "LD2410C G3 Still Threshold"
+        id: ld2410c_g3_still_threshold
     g4:
       move_threshold:
         name: "LD2410C G4 Move Threshold"
+        id: ld2410c_g4_move_threshold
       still_threshold:
         name: "LD2410C G4 Still Threshold"
+        id: ld2410c_g4_still_threshold
     g5:
       move_threshold:
         name: "LD2410C G5 Move Threshold"
+        id: ld2410c_g5_move_threshold
       still_threshold:
         name: "LD2410C G5 Still Threshold"
+        id: ld2410c_g5_still_threshold
     g6:
       move_threshold:
         name: "LD2410C G6 Move Threshold"
+        id: ld2410c_g6_move_threshold
       still_threshold:
         name: "LD2410C G6 Still Threshold"
+        id: ld2410c_g6_still_threshold
     g7:
       move_threshold:
         name: "LD2410C G7 Move Threshold"
+        id: ld2410c_g7_move_threshold
       still_threshold:
         name: "LD2410C G7 Still Threshold"
+        id: ld2410c_g7_still_threshold
     g8:
       move_threshold:
         name: "LD2410C G8 Move Threshold"
+        id: ld2410c_g8_move_threshold
       still_threshold:
         name: "LD2410C G8 Still Threshold"
+        id: ld2410c_g8_still_threshold
 
 select:
   # Occupancy Detect Mode:

@@ -34,9 +34,9 @@ Without calibration, the default values of the HLK-LD2410C presence gates are li
 
 2. Clear/clean the room of any moving objects, people, etc. that may interfere with the calibration. Exit the room yourself.
 
-3. Press the "LD2410C Calibration" button. This will wait 10 seconds, then perform a 300 second base noise calibration routine on the HLK-LD2410C, then finally refresh the "LD2410C GX Move/Still Threshold" number values in ESPHome/Home Assistant.
+3. Press the "LD2410C Calibration" button. This will wait 10 seconds, then perform a 900 second (15 minute) base noise calibration routine on the HLK-LD2410C, then finally refresh the "LD2410C GX Move/Still Threshold" number values in ESPHome/Home Assistant and increment each of them by 2 for additional headroom. During this time, the "LD2410C Calibration Status" sensor will show the progress/state of the calibration.
 
-4. Check the configured values for the various "LD2410C GX Move/Still Threshold" numbers, and optionally increase them slightly to account for variations. We usually round up to the nearest 5 or 10 depending on how noisy the gate is, except in situations where exact values matter (e.g. detecting sleeping presence where 1-2 can make a difference).
+4. Check the configured values for the various "LD2410C GX Move/Still Threshold" numbers. As noted, we automatically increase them by 2 from what the calibration reported, but you can also tweak them up or down further as required for your specific environment.
 
 5. Check the behaviour by entering the room and observing the sensor outputs. Ensure that your standard movements and stationary locations adequately trigger the various gates and overall presence indication.
 
@@ -736,9 +736,9 @@ Controls whether the LD2410C is in "Engineering Mode", which will display energy
 
 * Entity schema: `button.supersensor_XXXXXX_ld2410c_calibration`
 
-When pressed, will begin a self-calibration routine lasting ~330 seconds:
+When pressed, will begin a self-calibration routine lasting ~030 seconds:
   * 10s: Initial setup
-  * 300s: Noise detection
+  * 900s: Noise detection
   * 20s: Final setup and query
 
 Once completed, the various gate values below will be automatically set based on the detected noise levels during the calibration.
@@ -1239,6 +1239,17 @@ The calculated distance to a detected stationary object/person by the LD2410C mo
 * Update: Instant
 
 The detected energy level of a detected stationary object/person by the LD2410C module.
+
+#### LD2410C Calibration Status
+
+* Entity schema: `sensor.supersensor_XXXXXX_ld2410c_calibration_status`
+* Unit: N/A
+* Class: Text
+* Update: Instant
+
+The current status of the LD2410C Calibration routine.
+
+See also: [LD2410C Calibration](#ld2410c-calibration)
 
 #### LD2410C Firmware Version
 
