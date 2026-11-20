@@ -928,7 +928,7 @@ sensor:
       name: "ESP32 CPU Frequency"
 
   - platform: sgp4x
-    voc:
+    voc_index:
       name: "SGP41 VOC Index"
       id: sgp41_voc_index
       accuracy_decimals: 0
@@ -937,7 +937,7 @@ sensor:
         - sliding_window_moving_average:          # We take a reading every 15 seconds, but calculate the sliding
             window_size: 12                       # average over 12 readings i.e. 60 seconds/1 minute to normalize
             send_every: 3                         # brief spikes while still sending a value every 15 seconds.
-    nox:
+    nox_index:
       name: "SGP41 NOx Index"
       id: sgp41_nox_index
       accuracy_decimals: 0
