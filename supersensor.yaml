@@ -793,7 +793,13 @@ micro_wake_word:
         condition:
           voice_assistant.is_running:
         then:
-          voice_assistant.stop:
+          - voice_assistant.stop:
+          # The voice assistant only starts from idle, and stopping takes a moment
+          - wait_until:
+              condition:
+                not:
+                  voice_assistant.is_running:
+              timeout: 2s
     - voice_assistant.start:
         wake_word: !lambda return wake_word;
 
