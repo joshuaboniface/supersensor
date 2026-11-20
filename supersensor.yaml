@@ -767,7 +767,7 @@ micro_wake_word:
   id: mww
   microphone:
     microphone: mic
-    gain_factor: 4
+    gain_factor: 16
   stop_after_detection: false
   models:
     - model: github://joshuaboniface/Custom_V2_MicroWakeWords/models/computer/computer.json
@@ -799,13 +799,15 @@ micro_wake_word:
 
 voice_assistant:
   id: va
-  microphone: mic
+  microphone:
+    microphone: mic
+    gain_factor: 16
   speaker: dummy_speaker
   micro_wake_word: mww
   use_wake_word: false
   noise_suppression_level: 3
   auto_gain: 31 dbfs
-  volume_multiplier: 4
+  volume_multiplier: 1
   on_wake_word_detected:
     - logger.log: "Wake word detected in VA pipeline"
   on_listening:
